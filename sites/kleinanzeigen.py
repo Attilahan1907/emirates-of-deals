@@ -55,20 +55,19 @@ def get_kleinanzeigen_results(query, location="", radius=50, max_pages=5):
     location_encoded = location.strip().replace(" ", "-").lower()
     results = []
 
+    params = {}
+    if location_encoded:
+        params["locationStr"] = location.strip()
+        params["radius"] = radius
+
     for page in range(1, max_pages + 1):
-        if location_encoded:
-            if page == 1:
-                url = f"https://www.kleinanzeigen.de/s-{radius}km/{location_encoded}/{query_encoded}/k0"
-            else:
-                url = f"https://www.kleinanzeigen.de/s-seite:{page}/{radius}km/{location_encoded}/{query_encoded}/k0"
+        if page == 1:
+            url = f"https://www.kleinanzeigen.de/s-{query_encoded}/k0"
         else:
-            if page == 1:
-                url = f"https://www.kleinanzeigen.de/s-{query_encoded}/k0"
-            else:
-                url = f"https://www.kleinanzeigen.de/s-seite:{page}/{query_encoded}/k0"
+            url = f"https://www.kleinanzeigen.de/s-seite:{page}/{query_encoded}/k0"
 
         try:
-            response = requests.get(url, headers=headers, timeout=10)
+            response = requests.get(url, headers=headers, params=params, timeout=10)
             soup = BeautifulSoup(response.text, "lxml")
         except Exception:
             break
