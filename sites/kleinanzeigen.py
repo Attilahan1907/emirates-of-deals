@@ -38,7 +38,7 @@ def _parse_page(soup, query):
             # German number format: 1.250,00 € -> 1250.00
             price_clean = price_text.replace("€", "").replace(".", "").replace(",", ".").strip()
             price = float(re.findall(r"\d+\.?\d*", price_clean)[0])
-            if price < 1:
+            if price <= 1:
                 continue
             results.append({
                 "title": title,
