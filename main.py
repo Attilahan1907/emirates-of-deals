@@ -11,10 +11,15 @@ def search():
     query = data.get("query", "")
     location = data.get("location", "")
     radius = data.get("radius", 50)
-    if not query:
+    category = data.get("category", None)
+    category_id = data.get("category_id", None)
+    if not query and not category_id:
         return jsonify([])
 
-    results = get_kleinanzeigen_results(query, location=location, radius=radius)
+    results = get_kleinanzeigen_results(
+        query, location=location, radius=radius,
+        category=category, category_id=category_id
+    )
     return jsonify(sorted(results, key=lambda x: x["price"]))
 
 if __name__ == "__main__":
