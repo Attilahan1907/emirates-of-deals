@@ -1,4 +1,4 @@
-# BargainBot - Memory (Technische Referenz)
+# Emirates of Deals - Memory (Technische Referenz)
 
 ## Aktuelles Ergebnis-Format (Kleinanzeigen)
 ```json

@@ -158,7 +158,7 @@ def test_telegram():
     if not chat_id:
         return jsonify({"success": False, "error": "Keine Chat ID angegeben"}), 400
     try:
-        send_telegram(chat_id, "✅ BargainBot Test\n\nDeine Telegram-Benachrichtigungen funktionieren!")
+        send_telegram(chat_id, "✅ Emirates of Deals Test\n\nDeine Telegram-Benachrichtigungen funktionieren!")
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

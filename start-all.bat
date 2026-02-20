@@ -1,8 +1,8 @@
 @echo off
-title BargainBot Launcher
+title Emirates of Deals Launcher
 color 0A
 echo ========================================
-echo   Starting BargainBot Dashboard
+echo   Starting Emirates of Deals Dashboard
 echo ========================================
 echo.
 
@@ -28,7 +28,7 @@ if errorlevel 1 (
 )
 
 echo [1/2] Starting Flask Backend Server...
-start "BargainBot Backend" cmd /k "cd /d %~dp0 && python main.py"
+start "Emirates of Deals Backend" cmd /k "cd /d %~dp0 && python main.py"
 
 REM Wait a moment for backend to start
 timeout /t 3 /nobreak >nul
@@ -47,7 +47,7 @@ if not exist "node_modules" (
     )
 )
 
-start "BargainBot Frontend" cmd /k "cd /d %~dp0frontend-react && npm run dev"
+start "Emirates of Deals Frontend" cmd /k "cd /d %~dp0frontend-react && npm run dev"
 
 echo.
 echo ========================================

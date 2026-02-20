@@ -1,10 +1,10 @@
-# BargainBot - Projektdokumentation für Claude
+# Emirates of Deals - Projektdokumentation für Claude
 
 ## Projektstatus: Stand 20.02.2026
 
 ---
 
-## Was ist BargainBot?
+## Was ist Emirates of Deals?
 
 Ein Preisvergleichs- und Preisalarm-Tool für Kleinanzeigen.de (deutsche Gebrauchtmarkt-Plattform).
 - Scrapt Produkte von Kleinanzeigen.de (3 Seiten parallel → ~1-1.5s Ladezeit)

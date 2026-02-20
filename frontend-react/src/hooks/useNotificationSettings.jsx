@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, createContext, useContext } from 'react'
 
-const STORAGE_KEY = 'bargainbot_notification_settings'
+const STORAGE_KEY = 'emirates-of-deals_notification_settings'
 
 export const NotificationSettingsContext = createContext(null)
 

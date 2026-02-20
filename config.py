@@ -1,5 +1,5 @@
 """
-BargainBot Konfiguration
+Emirates of Deals Konfiguration
 Wird beim Start geladen. Fehlt die .env Datei, startet eine einmalige Setup-Routine.
 """
 
@@ -52,7 +52,7 @@ def _save_env(values: dict):
 def _setup_routine():
     """Einmalige interaktive Einrichtung, wird nur ausgeführt wenn .env fehlt."""
     print("\n" + "=" * 50)
-    print("  BargainBot – Ersteinrichtung")
+    print("  Emirates of Deals – Ersteinrichtung")
     print("=" * 50)
     print("Die Konfigurationsdatei (.env) wurde nicht gefunden.")
     print("Bitte einmalig die Zugangsdaten eingeben.\n")

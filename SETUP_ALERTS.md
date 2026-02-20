@@ -2,7 +2,7 @@
 
 ## Übersicht
 
-Das BargainBot-System unterstützt Preis-Alerts mit WhatsApp und Telegram-Benachrichtigungen. Wenn ein Produktpreis unter einen festgelegten Schwellenwert fällt, erhalten Sie automatisch eine Benachrichtigung.
+Das Emirates of Deals-System unterstützt Preis-Alerts mit WhatsApp und Telegram-Benachrichtigungen. Wenn ein Produktpreis unter einen festgelegten Schwellenwert fällt, erhalten Sie automatisch eine Benachrichtigung.
 
 ## Frontend Setup
 

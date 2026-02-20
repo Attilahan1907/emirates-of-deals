@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createAlert, deleteAlert } from '../api/alerts'
 
-const STORAGE_KEY = 'bargainbot_favorites'
+const STORAGE_KEY = 'emirates-of-deals_favorites'
 
 export function useFavorites() {
   const [favorites, setFavorites] = useState([])

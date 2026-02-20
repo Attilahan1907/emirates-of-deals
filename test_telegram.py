@@ -35,7 +35,7 @@ def test_telegram():
     print(f"\n📤 Sende Test-Nachricht an Chat-ID: {chat_id}...")
     
     test_message = (
-        "🎉 Test-Nachricht von BargainBot!\n\n"
+        "🎉 Test-Nachricht von Emirates of Deals!\n\n"
         "Wenn Sie diese Nachricht erhalten haben, ist Telegram korrekt konfiguriert!"
     )
     
@@ -57,7 +57,7 @@ def test_telegram():
 
 if __name__ == "__main__":
     print("=" * 50)
-    print("Telegram Test für BargainBot")
+    print("Telegram Test für Emirates of Deals")
     print("=" * 50)
     print()
     

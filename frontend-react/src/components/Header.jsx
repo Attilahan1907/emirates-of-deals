@@ -20,8 +20,8 @@ export function Header({ onLogoClick, onWatchlistClick, onSettingsClick, onAlert
 
           {/* Logo */}
           <button onClick={onLogoClick} className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-            <img src="/logo.png" alt="BargainBot" className="w-8 h-8 rounded-lg object-cover" onError={(e) => { e.target.style.display = 'none' }} />
-            <span className="text-sm font-semibold tracking-tight text-foreground">BargainBot</span>
+            <img src="/logo.png" alt="Emirates of Deals" className="w-8 h-8 rounded-lg object-cover" onError={(e) => { e.target.style.display = 'none' }} />
+            <span className="text-sm font-semibold tracking-tight text-foreground">Emirates of Deals</span>
           </button>
 
           {/* Desktop Nav Links */}

@@ -1,5 +1,5 @@
-BargainBot
-==========
+Emirates of Deals
+=================
 
 Preisvergleich-Tool für Kleinanzeigen.de.
 

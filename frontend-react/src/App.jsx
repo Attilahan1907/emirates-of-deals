@@ -162,9 +162,9 @@ export default function App() {
             <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
               <div className="flex items-center gap-2">
                 <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-                  <span className="text-xs font-bold text-primary-foreground">B</span>
+                  <span className="text-xs font-bold text-primary-foreground">E</span>
                 </div>
-                <span className="text-xs font-medium text-muted-foreground">BargainBot</span>
+                <span className="text-xs font-medium text-muted-foreground">Emirates of Deals</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Mit Präzision gebaut. Fürs Sparen designt.

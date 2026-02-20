@@ -1,4 +1,4 @@
-# BargainBot - Fortschrittsprotokoll
+# Emirates of Deals - Fortschrittsprotokoll
 
 ---
 
