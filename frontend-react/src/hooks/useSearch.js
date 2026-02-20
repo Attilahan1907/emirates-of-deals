@@ -13,17 +13,17 @@ export function useSearch() {
   const nextPageRef = useRef(1)
   const searchParamsRef = useRef(null)
 
-  const search = useCallback(async (query, location = '', radius = 50, category = null, categoryId = null) => {
+  const search = useCallback(async (query, location = '', radius = 50, category = null, categoryId = null, sources = ['kleinanzeigen']) => {
     if (!query.trim() && !categoryId) return
 
     setLoading(true)
     setError(null)
     setHasSearched(true)
     nextPageRef.current = 1 + BATCH_SIZE
-    searchParamsRef.current = { query, location, radius, category, categoryId }
+    searchParamsRef.current = { query, location, radius, category, categoryId, sources }
 
     try {
-      const data = await searchProducts(query, location, radius, category, categoryId, 1, BATCH_SIZE)
+      const data = await searchProducts(query, location, radius, category, categoryId, 1, BATCH_SIZE, sources)
       setResults(data.results || [])
       setHasMore(data.has_more || false)
     } catch (err) {
@@ -39,11 +39,11 @@ export function useSearch() {
     if (!searchParamsRef.current || loadingMore) return
 
     setLoadingMore(true)
-    const { query, location, radius, category, categoryId } = searchParamsRef.current
+    const { query, location, radius, category, categoryId, sources } = searchParamsRef.current
     const startPage = nextPageRef.current
 
     try {
-      const data = await searchProducts(query, location, radius, category, categoryId, startPage, BATCH_SIZE)
+      const data = await searchProducts(query, location, radius, category, categoryId, startPage, BATCH_SIZE, sources)
       setResults(prev => [...prev, ...(data.results || [])])
       setHasMore(data.has_more || false)
       nextPageRef.current = startPage + BATCH_SIZE

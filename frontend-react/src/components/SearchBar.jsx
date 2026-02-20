@@ -15,7 +15,7 @@ const RADIUS_OPTIONS = [
   { value: 200, label: '200 km' },
 ]
 
-export function SearchBar({ onSearch, loading, activeCategory, onClearCategory, minPrice, maxPrice, onMinPriceChange, onMaxPriceChange, hasSearched, onSearchAlert, showImages, onShowImagesChange }) {
+export function SearchBar({ onSearch, loading, activeCategory, onClearCategory, minPrice, maxPrice, onMinPriceChange, onMaxPriceChange, hasSearched, onSearchAlert, showImages, onShowImagesChange, includeEbay, onIncludeEbayChange }) {
   const [query, setQuery] = useState('')
   const [location, setLocation] = useState('')
   const [radius, setRadius] = useState(-1)
@@ -41,7 +41,8 @@ export function SearchBar({ onSearch, loading, activeCategory, onClearCategory, 
     if (query.trim() || activeCategory?.categoryId) {
       const effectiveLocation = radius === -1 ? '' : location
       const effectiveRadius = radius === -1 ? 50 : radius
-      onSearch(query, effectiveLocation, effectiveRadius)
+      const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
+      onSearch(query, effectiveLocation, effectiveRadius, sources)
     }
   }
 
@@ -127,6 +128,8 @@ export function SearchBar({ onSearch, loading, activeCategory, onClearCategory, 
           onMaxPriceChange={onMaxPriceChange}
           showImages={showImages}
           onShowImagesChange={onShowImagesChange}
+          includeEbay={includeEbay}
+          onIncludeEbayChange={onIncludeEbayChange}
         />
         {hasSearched && (
           <button

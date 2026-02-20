@@ -33,6 +33,7 @@ export default function App() {
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
   const [showImages, setShowImages] = useState(false)
+  const [includeEbay, setIncludeEbay] = useState(false)
 
   const filteredResults = useMemo(() => {
     const min = minPrice !== '' ? Number(minPrice) : 0
@@ -51,10 +52,10 @@ export default function App() {
     setActiveCategory(null)
   }
 
-  const handleSearch = (query, location, radius) => {
+  const handleSearch = (query, location, radius, sources = ['kleinanzeigen']) => {
     const effectiveQuery = query.trim() || activeCategory?.defaultQuery || ''
     setLastQuery(effectiveQuery)
-    search(effectiveQuery, location, radius, activeCategory?.benchmarkType || null, activeCategory?.categoryId || null)
+    search(effectiveQuery, location, radius, activeCategory?.benchmarkType || null, activeCategory?.categoryId || null, sources)
   }
 
   if (showWatchlist) {
@@ -114,6 +115,8 @@ export default function App() {
           onSearchAlert={() => setShowSearchAlert(true)}
           showImages={showImages}
           onShowImagesChange={setShowImages}
+          includeEbay={includeEbay}
+          onIncludeEbayChange={setIncludeEbay}
         />
 
         {error && (

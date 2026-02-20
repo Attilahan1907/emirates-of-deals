@@ -18,20 +18,35 @@
 
 ---
 
-## [20.02.2026] - Planung: Multi-Source Erweiterung (eBay + Amazon)
-### Status: PLANUNG — wartet auf OK
-### Geplante Meilensteine:
-- [x] **Sprint 1:** Refactoring — BaseScraper + Provider-Modell (Kleinanzeigen bleibt kompatibel)
-- [ ] **Sprint 2:** eBay-Provider (API-First, Scraping-Fallback)
-- [ ] **Sprint 3:** Amazon-Provider (PA-API oder robuste Selektoren)
-- [ ] **Sprint 4:** Normalisierung — einheitlicher Deal-Score für alle Quellen
-- [ ] **Sprint 5:** Frontend — Quell-Badge (eBay/Amazon/Kleinanzeigen) auf Produktkarte
-### Dateien geplant:
-- `sites/base_scraper.py` — neu
-- `sites/kleinanzeigen.py` — Umbau zu Klasse
-- `sites/ebay.py` — neu implementieren
-- `sites/amazon.py` — neu implementieren
-- `main.py` — Provider-Registry einbauen
+## [20.02.2026] - Sprint 2: EbayScraper (API-First + Scraping-Fallback)
+### Was gemacht wurde:
+- `sites/ebay.py` neu implementiert — `EbayScraper(BaseScraper)`, SOURCE = "ebay"
+- **API-Modus:** eBay Finding API (kostenlos, ebay.de) — kein Konto nötig für Suche
+- **Scraping-Fallback:** ebay.de HTML-Scraping wenn kein `EBAY_APP_ID` gesetzt
+- Preisfilterung: nur Sofortkauf-Artikel (`LH_BIN=1`), Auktionen werden ignoriert
+- Paralleles Laden (3 Seiten gleichzeitig) wie bei Kleinanzeigen
+- `main.py`: eBay zu `PROVIDERS` hinzugefügt
+- `FilterPanel`: "eBay einbeziehen" Checkbox (amber-farben)
+- `SearchBar`: `sources`-Array an `onSearch()` weitergegeben
+- `App.jsx`: `includeEbay` State, `handleSearch` leitet `sources` weiter
+- `useSearch.js`: `sources` Parameter in `search()` + `loadMore()` gespeichert
+- `api/search.js`: `sources` im POST-Body
+- `.env.example`: `EBAY_APP_ID` Hinweis ergänzt
+### Meilensteine:
+- [x] **Sprint 1:** Refactoring — BaseScraper + Provider-Modell
+- [x] **Sprint 2:** eBay-Provider (API-First, Scraping-Fallback)
+- [ ] **Sprint 3:** ~~Amazon~~ (gestrichen — zu aufwendig/kostenpflichtig)
+- [ ] **Sprint 4:** Normalisierung — einheitlicher Deal-Score für eBay
+- [ ] **Sprint 5:** Frontend — Quell-Badge (eBay/Kleinanzeigen) auf Produktkarte
+### Dateien geändert:
+- `sites/ebay.py` — neu implementiert
+- `main.py` — EbayScraper in PROVIDERS
+- `.env.example` — EBAY_APP_ID
+- `frontend-react/src/components/FilterPanel.jsx` — eBay-Checkbox
+- `frontend-react/src/components/SearchBar.jsx` — sources weitergeben
+- `frontend-react/src/App.jsx` — includeEbay State
+- `frontend-react/src/hooks/useSearch.js` — sources Parameter
+- `frontend-react/src/api/search.js` — sources im POST-Body
 
 ---
 

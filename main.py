@@ -4,9 +4,11 @@ load_config()  # .env laden oder Setup-Routine starten – muss als erstes passi
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from sites.kleinanzeigen import KleinanzeigenScraper
+from sites.ebay import EbayScraper
 
 PROVIDERS = {
     "kleinanzeigen": KleinanzeigenScraper(),
+    "ebay": EbayScraper(),
 }
 import threading
 import time

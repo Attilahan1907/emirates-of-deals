@@ -1,5 +1,5 @@
-export async function searchProducts(query, location = '', radius = 50, category = null, categoryId = null, startPage = 1, batchSize = 3) {
-  const body = { query, location, radius: Number(radius), start_page: startPage, batch_size: batchSize }
+export async function searchProducts(query, location = '', radius = 50, category = null, categoryId = null, startPage = 1, batchSize = 3, sources = ['kleinanzeigen']) {
+  const body = { query, location, radius: Number(radius), start_page: startPage, batch_size: batchSize, sources }
   if (category) body.category = category
   if (categoryId) body.category_id = categoryId
 
