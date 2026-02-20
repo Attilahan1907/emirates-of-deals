@@ -104,6 +104,11 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
               #{rank}
             </span>
             {isBest && <BestDealBadge />}
+            {item.source === 'ebay' && (
+              <span className="text-[9px] font-semibold bg-amber-400/15 text-amber-400 border border-amber-400/20 rounded-full px-2 py-0.5">
+                eBay
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {hasScore && (

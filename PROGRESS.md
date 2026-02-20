@@ -18,6 +18,19 @@
 
 ---
 
+## [20.02.2026] - Sprint 4+5: Normalisierung — Einheitlicher Deal-Score + Quell-Badge
+### Was gemacht wurde:
+- `ResultsGrid`: Deal-Score wird jetzt **immer** berechnet, nicht nur bei Benchmark-Kategorien
+- Normale Suchen zeigen jetzt relative Deal-Scores (günstigstes = 100, teuerstes = 0)
+- eBay + Kleinanzeigen Ergebnisse werden **gemeinsam** bewertet → echter Preisvergleich
+- `ProductCard`: Kleines amber-farbiges "eBay" Badge neben Rangnummer wenn Quelle = eBay
+- Kleinanzeigen-Items bekommen kein extra Badge (Standard)
+### Dateien geändert:
+- `frontend-react/src/components/ResultsGrid.jsx` — immer scores berechnen
+- `frontend-react/src/components/ProductCard.jsx` — eBay Badge hinzugefügt
+
+---
+
 ## [20.02.2026] - Sprint 2: EbayScraper (API-First + Scraping-Fallback)
 ### Was gemacht wurde:
 - `sites/ebay.py` neu implementiert — `EbayScraper(BaseScraper)`, SOURCE = "ebay"
@@ -36,8 +49,8 @@
 - [x] **Sprint 1:** Refactoring — BaseScraper + Provider-Modell
 - [x] **Sprint 2:** eBay-Provider (API-First, Scraping-Fallback)
 - [ ] **Sprint 3:** ~~Amazon~~ (gestrichen — zu aufwendig/kostenpflichtig)
-- [ ] **Sprint 4:** Normalisierung — einheitlicher Deal-Score für eBay
-- [ ] **Sprint 5:** Frontend — Quell-Badge (eBay/Kleinanzeigen) auf Produktkarte
+- [x] **Sprint 4:** Normalisierung — einheitlicher Deal-Score + Quell-Badge
+- [x] **Sprint 5:** Frontend — Quell-Badge (eBay) auf Produktkarte (in Sprint 4 integriert)
 ### Dateien geändert:
 - `sites/ebay.py` — neu implementiert
 - `main.py` — EbayScraper in PROVIDERS

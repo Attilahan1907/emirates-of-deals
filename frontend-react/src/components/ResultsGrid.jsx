@@ -5,7 +5,7 @@ const BENCHMARK_TYPES = ['gpu', 'cpu', 'smartphone', 'ram']
 
 export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages, hasMore, loadingMore, onLoadMore }) {
   const hasBenchmark = BENCHMARK_TYPES.includes(benchmarkType)
-  const scores = hasBenchmark ? computeDealScores(results, benchmarkType) : null
+  const scores = computeDealScores(results, benchmarkType)
 
   return (
     <>
@@ -17,7 +17,7 @@ export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages
             rank={index + 1}
             isBest={index === 0}
             allPrices={results.map((r) => r.price)}
-            dealScore={scores ? scores[index] : null}
+            dealScore={scores[index] ?? null}
             isBenchmark={hasBenchmark}
             onOpenSettings={onOpenSettings}
             showImages={showImages}
