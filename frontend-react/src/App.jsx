@@ -5,6 +5,7 @@ import { StatsBar } from './components/StatsBar'
 import { ResultsGrid } from './components/ResultsGrid'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
+
 import { CategoryGrid } from './components/CategoryGrid'
 import { Watchlist } from './components/Watchlist'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -164,10 +165,7 @@ export default function App() {
         )}
 
         {!hasSearched && !loading && (
-          <>
-            <EmptyState variant="welcome" onSuggestionClick={(q) => { setLastQuery(q); search(q, '', 50) }} />
-            <CategoryGrid onCategorySelect={handleCategorySelect} />
-          </>
+          <CategoryGrid onCategorySelect={handleCategorySelect} />
         )}
       </main>
     </div>
