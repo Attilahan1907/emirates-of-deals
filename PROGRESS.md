@@ -18,6 +18,30 @@
 
 ---
 
+## [20.02.2026] - v0 Design komplett ins Vite-Frontend übertragen
+### Was gemacht wurde:
+- `tw-animate-css` npm-Paket installiert
+- `index.css`: v0 CSS-Variablen (--background, --primary, --muted-foreground etc.) + Tailwind `@theme inline` Block integriert; Legacy-Tokens (neon-cyan, electric-purple) bleiben kompatibel
+- `App.jsx`: 3-Modi-Architektur (Landing / Ergebnisse / Watchlist)
+  - Landing-Seite: exakt v0 `page.tsx` Layout (Badge, H1 Gradient, Subtitle, HeroSearch, statische Stats, CategoryGrid, Footer)
+  - Ergebnis-Seite: Compact-Layout mit SearchBar + Ergebnissen
+- `Header.jsx`: exakt v0 `header.tsx` Pill-Nav (Glassmorphism, Mobile-Menu) + unsere Action-Buttons (Settings/Alerts/Watchlist) statt Anmelden/Loslegen
+- `SearchBar.jsx`: 2 Modi
+  - Hero-Modus (!hasSearched): v0 `hero-search.tsx` rounded-full Pill + Standort-Zeile + Popular-Searches
+  - Compact-Modus (hasSearched): bestehender Design mit allen Feldern
+- `CategoryGrid.jsx`: v0 `category-grid.tsx` Bento-Grid `auto-rows-[140px]` + Subcategory-Panel unterhalb
+- `app/globals.css`, `app/layout.tsx`, `app/page.tsx`, `components/*.tsx`: v0-Referenzdateien ans Projektwurzel kopiert
+### Dateien geändert:
+- `frontend-react/src/index.css`
+- `frontend-react/src/App.jsx`
+- `frontend-react/src/components/Header.jsx`
+- `frontend-react/src/components/SearchBar.jsx`
+- `frontend-react/src/components/CategoryGrid.jsx`
+- `frontend-react/package.json` (tw-animate-css hinzugefügt)
+- `app/` und `components/` (neue v0-Referenzdateien)
+
+---
+
 ## [20.02.2026] - Sprint UI-1 bis UI-5: Premium Design Integration
 ### Was gemacht wurde:
 - **index.css**: CSS-Variablen auf Premium-Werte aktualisiert (#050505 BG, #00e5ff Cyan, #7c3aed Violet), `.glass` verbessert, `.hover-lift` Utility hinzugefügt
