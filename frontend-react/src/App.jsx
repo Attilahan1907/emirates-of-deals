@@ -6,13 +6,30 @@ import { ResultsGrid } from './components/ResultsGrid'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
 import { CategoryGrid } from './components/CategoryGrid'
+import { Watchlist } from './components/Watchlist'
+import { SettingsDialog } from './components/SettingsDialog'
+import { AlertsListDialog } from './components/AlertsListDialog'
+import { SearchAlertDialog } from './components/SearchAlertDialog'
 import { useSearch } from './hooks/useSearch'
 
 export default function App() {
-  const { results, loading, error, hasSearched, search, reset } = useSearch()
+  const [showWatchlist, setShowWatchlist] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
+  const [showAlerts, setShowAlerts] = useState(false)
+  const [showSearchAlert, setShowSearchAlert] = useState(false)
+  const [lastQuery, setLastQuery] = useState('')
+  const {
+    results,
+    loading,
+    error,
+    hasSearched,
+    search,
+    reset,
+  } = useSearch()
   const [activeCategory, setActiveCategory] = useState(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
+  const [showImages, setShowImages] = useState(false)
 
   const filteredResults = useMemo(() => {
     const min = minPrice !== '' ? Number(minPrice) : 0
@@ -23,6 +40,7 @@ export default function App() {
   const handleCategorySelect = (subcategory) => {
     setActiveCategory(subcategory)
     const query = subcategory.defaultQuery || ''
+    setLastQuery(query)
     search(query, '', 50, subcategory.benchmarkType || null, subcategory.categoryId || null)
   }
 
@@ -32,17 +50,53 @@ export default function App() {
 
   const handleSearch = (query, location, radius) => {
     const effectiveQuery = query.trim() || activeCategory?.defaultQuery || ''
+    setLastQuery(effectiveQuery)
     search(effectiveQuery, location, radius, activeCategory?.benchmarkType || null, activeCategory?.categoryId || null)
+  }
+
+  if (showWatchlist) {
+    return (
+      <div className="min-h-screen bg-base flex flex-col">
+        <Header
+          onLogoClick={() => {
+            setShowWatchlist(false)
+            setActiveCategory(null)
+            setMinPrice('')
+            setMaxPrice('')
+            reset()
+          }}
+          onWatchlistClick={() => setShowWatchlist(false)}
+          onSettingsClick={() => setShowSettings(true)}
+          onAlertsClick={() => setShowAlerts(true)}
+        />
+        <SettingsDialog isOpen={showSettings} onClose={() => setShowSettings(false)} />
+        <AlertsListDialog isOpen={showAlerts} onClose={() => setShowAlerts(false)} />
+        <Watchlist />
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-base flex flex-col">
-      <Header onLogoClick={() => {
-        setActiveCategory(null)
-        setMinPrice('')
-        setMaxPrice('')
-        reset()
-      }} />
+      <Header
+        onLogoClick={() => {
+          setActiveCategory(null)
+          setMinPrice('')
+          setMaxPrice('')
+          reset()
+        }}
+        onWatchlistClick={() => setShowWatchlist(true)}
+        onSettingsClick={() => setShowSettings(true)}
+        onAlertsClick={() => setShowAlerts(true)}
+      />
+      <SettingsDialog isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <AlertsListDialog isOpen={showAlerts} onClose={() => setShowAlerts(false)} />
+      <SearchAlertDialog
+        isOpen={showSearchAlert}
+        onClose={() => setShowSearchAlert(false)}
+        query={lastQuery}
+        onOpenSettings={() => { setShowSearchAlert(false); setShowSettings(true) }}
+      />
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
         <SearchBar
           onSearch={handleSearch}
@@ -53,6 +107,10 @@ export default function App() {
           maxPrice={maxPrice}
           onMinPriceChange={setMinPrice}
           onMaxPriceChange={setMaxPrice}
+          hasSearched={hasSearched && !loading && results.length > 0}
+          onSearchAlert={() => setShowSearchAlert(true)}
+          showImages={showImages}
+          onShowImagesChange={setShowImages}
         />
 
         {error && (
@@ -69,6 +127,8 @@ export default function App() {
             <ResultsGrid
               results={filteredResults}
               benchmarkType={activeCategory?.benchmarkType || null}
+              onOpenSettings={() => setShowSettings(true)}
+              showImages={showImages}
             />
           </>
         )}
@@ -86,7 +146,7 @@ export default function App() {
 
         {!hasSearched && !loading && (
           <>
-            <EmptyState variant="welcome" onSuggestionClick={(q) => search(q, '', 50)} />
+            <EmptyState variant="welcome" onSuggestionClick={(q) => { setLastQuery(q); search(q, '', 50) }} />
             <CategoryGrid onCategorySelect={handleCategorySelect} />
           </>
         )}

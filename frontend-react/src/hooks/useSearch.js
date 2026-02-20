@@ -16,7 +16,7 @@ export function useSearch() {
 
     try {
       const data = await searchProducts(query, location, radius, category, categoryId)
-      setResults(data)
+      setResults(data.results || [])
     } catch (err) {
       setError(err.message || 'Ein Fehler ist aufgetreten')
       setResults([])
@@ -31,5 +31,12 @@ export function useSearch() {
     setHasSearched(false)
   }, [])
 
-  return { results, loading, error, hasSearched, search, reset }
+  return {
+    results,
+    loading,
+    error,
+    hasSearched,
+    search,
+    reset,
+  }
 }

@@ -1,12 +1,6 @@
 export function DealScore({ score, model, benchmark, isBenchmark, pricePerGB, ramType }) {
   if (score === null || score === undefined) return null
 
-  const radius = 15
-  const stroke = 3.5
-  const normalizedRadius = radius - stroke / 2
-  const circumference = 2 * Math.PI * normalizedRadius
-  const offset = circumference - (score / 100) * circumference
-
   const color =
     score >= 70 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444'
 
@@ -20,46 +14,13 @@ export function DealScore({ score, model, benchmark, isBenchmark, pricePerGB, ra
     : `Deal Score: ${score}/100 – relativ zu allen Angeboten`
 
   return (
-    <div className="flex items-center gap-2" title={tooltip}>
-      <div className="relative w-9 h-9">
-        <svg className="w-9 h-9 -rotate-90" viewBox="0 0 30 30">
-          <circle
-            cx="15"
-            cy="15"
-            r={normalizedRadius}
-            fill="none"
-            stroke="rgba(255,255,255,0.07)"
-            strokeWidth={stroke}
-          />
-          <circle
-            cx="15"
-            cy="15"
-            r={normalizedRadius}
-            fill="none"
-            stroke={color}
-            strokeWidth={stroke}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            style={{ transition: 'stroke-dashoffset 0.7s ease' }}
-          />
-        </svg>
-        <span
-          className="absolute inset-0 flex items-center justify-center text-[9px] font-bold leading-none"
-          style={{ color }}
-        >
-          {score}
-        </span>
-      </div>
-      <div className="flex flex-col">
-        <span className="text-[9px] text-white/35 uppercase tracking-wider font-semibold">{label}</span>
-        {isRam && (
-          <span className="text-[8px] text-white/25">{pricePerGB.toFixed(2)} EUR</span>
-        )}
-        {!isRam && isBenchmark && model && (
-          <span className="text-[8px] text-white/25 truncate max-w-[70px]">{model}</span>
-        )}
-      </div>
+    <div
+      className="flex flex-col items-center justify-center w-10 h-10 rounded-lg font-bold"
+      style={{ backgroundColor: color + '22', color }}
+      title={tooltip}
+    >
+      <span className="text-sm leading-none">{score}</span>
+      <span className="text-[8px] opacity-60 leading-none mt-0.5">{label}</span>
     </div>
   )
 }

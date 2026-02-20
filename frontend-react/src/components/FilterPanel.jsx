@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { SlidersHorizontal, Euro, X } from 'lucide-react'
 
-export function FilterPanel({ minPrice, maxPrice, onMinPriceChange, onMaxPriceChange }) {
+export function FilterPanel({ minPrice, maxPrice, onMinPriceChange, onMaxPriceChange, showImages, onShowImagesChange }) {
   const [open, setOpen] = useState(false)
 
   const hasActiveFilters = minPrice !== '' || maxPrice !== ''
@@ -52,6 +52,26 @@ export function FilterPanel({ minPrice, maxPrice, onMinPriceChange, onMaxPriceCh
             />
             <span className="text-[10px] text-white/20">EUR</span>
           </div>
+
+          {/* Fotos Toggle */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div
+              onClick={() => onShowImagesChange(!showImages)}
+              className={`w-4 h-4 rounded border flex items-center justify-center transition-all ${
+                showImages
+                  ? 'bg-neon-cyan border-neon-cyan'
+                  : 'border-white/20 bg-white/5'
+              }`}
+            >
+              {showImages && <span className="text-black text-[10px] font-bold leading-none">✓</span>}
+            </div>
+            <span
+              onClick={() => onShowImagesChange(!showImages)}
+              className="text-[11px] text-white/40 hover:text-white/60 transition-colors"
+            >
+              Fotos anzeigen
+            </span>
+          </label>
 
           {/* Clear all */}
           {hasActiveFilters && (

@@ -1,3 +1,19 @@
 __pycache__/
 *.pyc
 .claude/
+
+# Sensible Konfiguration – niemals committen
+.env
+price_alerts.json
+search_alerts.json
+
+# Build-Artefakte (Python)
+build/
+dist/
+*.spec
+
+# Build-Artefakte
+frontend-react/node_modules/
+frontend-react/dist/
+node_modules/
+.fly/

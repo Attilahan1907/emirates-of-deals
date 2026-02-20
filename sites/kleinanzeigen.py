@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 headers = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -98,6 +99,12 @@ def _parse_page(soup, query, category=None, has_category_id=False):
         if any(x in lower for x in ["vb", "zu verschenken", "anfrage"]):
             continue
 
+        # Bild-URL extrahieren (data-src für lazy-loaded Bilder)
+        img_tag = item.select_one(".imagebox img")
+        image_url = None
+        if img_tag:
+            image_url = img_tag.get("data-src") or img_tag.get("src")
+
         try:
             # German number format: 1.250,00 € -> 1250.00
             price_clean = price_text.replace("€", "").replace(".", "").replace(",", ".").strip()
@@ -108,18 +115,58 @@ def _parse_page(soup, query, category=None, has_category_id=False):
                 "title": title,
                 "url": link,
                 "price": price,
-                "original": f"€{price:.2f}"
+                "original": f"€{price:.2f}",
+                "image": image_url,
             })
         except Exception:
             continue
     return results
 
-def get_kleinanzeigen_results(query, location="", radius=50, max_pages=5, category=None, category_id=None):
+def get_price_from_listing_url(url):
+    """
+    Fetches a single Kleinanzeigen listing page and extracts the current price.
+    Returns the price as float, or None if not found / listing deleted.
+    """
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 404:
+            return False  # Anzeige definitiv gelöscht
+        soup = BeautifulSoup(response.text, "lxml")
+
+        # Primary selector used on Kleinanzeigen detail pages
+        price_tag = soup.select_one("#viewad-price")
+        if not price_tag:
+            # Fallback selectors
+            price_tag = soup.select_one("[data-testid='price-amount']")
+        if not price_tag:
+            price_tag = soup.select_one(".boxedarticle--price")
+
+        if not price_tag:
+            return None
+
+        price_text = price_tag.get_text(strip=True)
+        lower = price_text.lower()
+
+        if any(x in lower for x in ["vb", "zu verschenken", "anfrage", "gesuch"]):
+            return None
+
+        price_clean = price_text.replace("€", "").replace(".", "").replace(",", ".").strip()
+        matches = re.findall(r"\d+\.?\d*", price_clean)
+        if not matches:
+            return None
+
+        price = float(matches[0])
+        return price if price > 1 else None
+
+    except Exception as e:
+        print(f"[kleinanzeigen] Error fetching listing price from {url}: {e}")
+        return None
+
+
+def get_kleinanzeigen_results(query, location="", radius=50, max_pages=3, category=None, category_id=None):
     query_encoded = query.replace(" ", "-") if query else ""
     location_encoded = location.strip().replace(" ", "-").lower()
-    results = []
 
-    # Kleinanzeigen category suffix: k0 → k0c216 (Autos), k0c225 (PC-Zubehör), etc.
     k_suffix = f"k0c{category_id}" if category_id else "k0"
 
     params = {}
@@ -127,29 +174,38 @@ def get_kleinanzeigen_results(query, location="", radius=50, max_pages=5, catego
         params["locationStr"] = location.strip()
         params["radius"] = radius
 
-    for page in range(1, max_pages + 1):
+    def fetch_page(page):
         if query_encoded:
-            if page == 1:
-                url = f"https://www.kleinanzeigen.de/s-{query_encoded}/{k_suffix}"
-            else:
-                url = f"https://www.kleinanzeigen.de/s-seite:{page}/{query_encoded}/{k_suffix}"
+            url = (
+                f"https://www.kleinanzeigen.de/s-{query_encoded}/{k_suffix}"
+                if page == 1
+                else f"https://www.kleinanzeigen.de/s-seite:{page}/{query_encoded}/{k_suffix}"
+            )
         else:
-            # Category-only search (no query text)
-            if page == 1:
-                url = f"https://www.kleinanzeigen.de/s-anzeigen/{k_suffix}"
-            else:
-                url = f"https://www.kleinanzeigen.de/s-anzeigen/seite:{page}/{k_suffix}"
-
+            url = (
+                f"https://www.kleinanzeigen.de/s-anzeigen/{k_suffix}"
+                if page == 1
+                else f"https://www.kleinanzeigen.de/s-anzeigen/seite:{page}/{k_suffix}"
+            )
         try:
             response = requests.get(url, headers=headers, params=params, timeout=10)
             soup = BeautifulSoup(response.text, "lxml")
+            return page, _parse_page(soup, query or "", category, bool(category_id))
         except Exception:
-            break
+            return page, []
 
-        page_results = _parse_page(soup, query or "", category, bool(category_id))
-        if not page_results:
-            break
+    # Alle Seiten parallel abrufen
+    results_by_page = {}
+    with ThreadPoolExecutor(max_workers=max_pages) as executor:
+        futures = {executor.submit(fetch_page, p): p for p in range(1, max_pages + 1)}
+        for future in as_completed(futures):
+            page, page_results = future.result()
+            if page_results:
+                results_by_page[page] = page_results
 
-        results.extend(page_results)
+    # Reihenfolge beibehalten (Seite 1 zuerst)
+    results = []
+    for page in sorted(results_by_page.keys()):
+        results.extend(results_by_page[page])
 
     return results
