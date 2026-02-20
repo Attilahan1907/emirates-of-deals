@@ -21,9 +21,12 @@ export default function App() {
   const {
     results,
     loading,
+    loadingMore,
     error,
     hasSearched,
+    hasMore,
     search,
+    loadMore,
     reset,
   } = useSearch()
   const [activeCategory, setActiveCategory] = useState(null)
@@ -129,6 +132,9 @@ export default function App() {
               benchmarkType={activeCategory?.benchmarkType || null}
               onOpenSettings={() => setShowSettings(true)}
               showImages={showImages}
+              hasMore={hasMore}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
             />
           </>
         )}

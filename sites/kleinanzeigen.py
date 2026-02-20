@@ -163,7 +163,7 @@ def get_price_from_listing_url(url):
         return None
 
 
-def get_kleinanzeigen_results(query, location="", radius=50, max_pages=3, category=None, category_id=None):
+def get_kleinanzeigen_results(query, location="", radius=50, start_page=1, batch_size=3, category=None, category_id=None):
     query_encoded = query.replace(" ", "-") if query else ""
     location_encoded = location.strip().replace(" ", "-").lower()
 
@@ -194,18 +194,21 @@ def get_kleinanzeigen_results(query, location="", radius=50, max_pages=3, catego
         except Exception:
             return page, []
 
-    # Alle Seiten parallel abrufen
+    pages = range(start_page, start_page + batch_size)
     results_by_page = {}
-    with ThreadPoolExecutor(max_workers=max_pages) as executor:
-        futures = {executor.submit(fetch_page, p): p for p in range(1, max_pages + 1)}
+    with ThreadPoolExecutor(max_workers=batch_size) as executor:
+        futures = {executor.submit(fetch_page, p): p for p in pages}
         for future in as_completed(futures):
             page, page_results = future.result()
             if page_results:
                 results_by_page[page] = page_results
 
-    # Reihenfolge beibehalten (Seite 1 zuerst)
     results = []
     for page in sorted(results_by_page.keys()):
         results.extend(results_by_page[page])
 
-    return results
+    # Wenn die letzte Seite des Batches Ergebnisse hatte → es gibt wahrscheinlich mehr
+    last_page = start_page + batch_size - 1
+    has_more = last_page in results_by_page
+
+    return results, has_more

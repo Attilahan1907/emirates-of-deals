@@ -12,6 +12,21 @@ STATIC_FOLDER = os.path.join(os.path.dirname(__file__), 'frontend-react', 'dist'
 app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
 CORS(app)
 
+# Einfacher In-Memory-Cache (Python-Dict)
+_cache = {}
+CACHE_TTL = 300  # 5 Minuten
+
+def _cache_get(key):
+    if key in _cache:
+        data, ts = _cache[key]
+        if time.time() - ts < CACHE_TTL:
+            return data
+        del _cache[key]
+    return None
+
+def _cache_set(key, data):
+    _cache[key] = (data, time.time())
+
 # Try to import price monitor, but don't fail if it's not available
 try:
     from price_monitor import PriceMonitor, SearchAlertMonitor
@@ -45,18 +60,30 @@ def search():
     radius = data.get("radius", 50)
     category = data.get("category", None)
     category_id = data.get("category_id", None)
+    start_page = data.get("start_page", 1)
+    batch_size = data.get("batch_size", 3)
 
     if not query and not category_id:
-        return jsonify({"results": []})
+        return jsonify({"results": [], "has_more": False})
 
-    all_results = get_kleinanzeigen_results(
+    cache_key = f"{query}|{location}|{radius}|{category}|{category_id}|{start_page}|{batch_size}"
+    cached = _cache_get(cache_key)
+    if cached:
+        print(f"[cache] HIT: {cache_key}")
+        return jsonify(cached)
+
+    print(f"[cache] MISS: {cache_key}")
+    results, has_more = get_kleinanzeigen_results(
         query, location=location, radius=radius,
+        start_page=start_page, batch_size=batch_size,
         category=category, category_id=category_id
     )
 
-    sorted_results = sorted(all_results, key=lambda x: x["price"])
+    sorted_results = sorted(results, key=lambda x: x["price"])
+    response_data = {"results": sorted_results, "has_more": has_more}
+    _cache_set(cache_key, response_data)
 
-    return jsonify({"results": sorted_results})
+    return jsonify(response_data)
 
 @app.route("/alerts", methods=["GET"])
 def get_alerts():
