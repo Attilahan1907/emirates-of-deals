@@ -169,6 +169,28 @@ python test_telegram.py
 
 ---
 
+## Architektur-Entscheidungen: Multi-Source (geplant)
+
+### Warum Provider-Modell statt einzelne Funktionen?
+Jede Plattform hat andere Auth, Rate-Limits, Formate und Fehlerquellen.
+Eine gemeinsame Basisklasse erzwingt einheitliche Schnittstelle und verhindert Copy-Paste zwischen Scrapern.
+
+### Warum API-First bei eBay/Amazon?
+- Amazon-Scraping ist extrem instabil (Cloudflare, CAPTCHAs, JS-Rendering)
+- eBay Finding API ist kostenlos und offiziell
+- Scraping als Fallback bleibt möglich aber nicht als Primärlösung
+
+### Warum `sources`-Parameter im Search-Endpunkt?
+- Rückwärtskompatibel: Default `["kleinanzeigen"]` bricht nichts
+- Ermöglicht gezielte Suche auf einer oder mehreren Plattformen
+- Cache-Key muss `sources` enthalten (unterschiedliche Ergebnisse je Quelle)
+
+### Header-Rotation Pflicht
+Alle Scraper erben von BaseScraper, der Header-Rotation und zufällige Delays implementiert.
+Kein Scraper macht Requests ohne diese Sicherheitsschicht.
+
+---
+
 ## Offene TODOs (Priorität)
 
 **Nice to have:**

@@ -2,6 +2,23 @@
 
 ---
 
+## [20.02.2026] - Planung: Multi-Source Erweiterung (eBay + Amazon)
+### Status: PLANUNG — wartet auf OK
+### Geplante Meilensteine:
+- [ ] **Sprint 1:** Refactoring — BaseScraper + Provider-Modell (Kleinanzeigen bleibt kompatibel)
+- [ ] **Sprint 2:** eBay-Provider (API-First, Scraping-Fallback)
+- [ ] **Sprint 3:** Amazon-Provider (PA-API oder robuste Selektoren)
+- [ ] **Sprint 4:** Normalisierung — einheitlicher Deal-Score für alle Quellen
+- [ ] **Sprint 5:** Frontend — Quell-Badge (eBay/Amazon/Kleinanzeigen) auf Produktkarte
+### Dateien geplant:
+- `sites/base_scraper.py` — neu
+- `sites/kleinanzeigen.py` — Umbau zu Klasse
+- `sites/ebay.py` — neu implementieren
+- `sites/amazon.py` — neu implementieren
+- `main.py` — Provider-Registry einbauen
+
+---
+
 ## [20.02.2026] - Pagination + Caching
 ### Was gemacht wurde:
 - Scraper lädt jetzt in Batches (3 Seiten gleichzeitig, ~1s pro Batch)
