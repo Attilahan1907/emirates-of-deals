@@ -13,25 +13,59 @@ PROVIDERS = {
 import threading
 import time
 import os
+import json
 
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), 'frontend-react', 'dist')
 app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
 CORS(app)
 
-# Einfacher In-Memory-Cache (Python-Dict)
-_cache = {}
+# ── Persistenter Cache (Fly.io /data Volume oder lokales Verzeichnis) ──────────
 CACHE_TTL = 300  # 5 Minuten
+_DATA_DIR = '/data' if os.path.isdir('/data') else os.path.dirname(__file__)
+_CACHE_FILE = os.path.join(_DATA_DIR, 'search_cache.json')
+_cache: dict = {}
+_cache_lock = threading.Lock()
+
+def _load_cache_from_disk():
+    """Beim Start: gültigen Cache vom Disk laden."""
+    global _cache
+    try:
+        if os.path.exists(_CACHE_FILE):
+            with open(_CACHE_FILE, 'r', encoding='utf-8') as f:
+                raw = json.load(f)
+            now = time.time()
+            _cache = {k: (v['data'], v['ts']) for k, v in raw.items()
+                      if now - v['ts'] < CACHE_TTL}
+            print(f"[cache] {len(_cache)} Einträge vom Disk geladen ({_CACHE_FILE})")
+    except Exception as e:
+        print(f"[cache] Disk-Load fehlgeschlagen: {e}")
+        _cache = {}
+
+def _save_cache_to_disk():
+    """Cache auf Disk schreiben (läuft im Hintergrund-Thread)."""
+    try:
+        with _cache_lock:
+            serializable = {k: {'data': v[0], 'ts': v[1]} for k, v in _cache.items()}
+        with open(_CACHE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(serializable, f)
+    except Exception as e:
+        print(f"[cache] Disk-Save fehlgeschlagen: {e}")
 
 def _cache_get(key):
-    if key in _cache:
-        data, ts = _cache[key]
-        if time.time() - ts < CACHE_TTL:
-            return data
-        del _cache[key]
+    with _cache_lock:
+        if key in _cache:
+            data, ts = _cache[key]
+            if time.time() - ts < CACHE_TTL:
+                return data
+            del _cache[key]
     return None
 
 def _cache_set(key, data):
-    _cache[key] = (data, time.time())
+    with _cache_lock:
+        _cache[key] = (data, time.time())
+    threading.Thread(target=_save_cache_to_disk, daemon=True).start()
+
+_load_cache_from_disk()
 
 # Try to import price monitor, but don't fail if it's not available
 try:
@@ -60,7 +94,8 @@ def serve_react(path):
 
 @app.route("/search", methods=["POST"])
 def search():
-    data = request.json
+  try:
+    data = request.json or {}
     query = data.get("query", "")
     location = data.get("location", "")
     radius = data.get("radius", 50)
@@ -68,13 +103,15 @@ def search():
     category_id = data.get("category_id", None)
     start_page = data.get("start_page", 1)
     batch_size = data.get("batch_size", 3)
+    min_price = data.get("min_price", None)
+    max_price = data.get("max_price", None)
 
     if not query and not category_id:
         return jsonify({"results": [], "has_more": False})
 
     sources = data.get("sources", ["kleinanzeigen"])
 
-    cache_key = f"{query}|{location}|{radius}|{category}|{category_id}|{start_page}|{batch_size}|{'_'.join(sorted(sources))}"
+    cache_key = f"{query}|{location}|{radius}|{category}|{category_id}|{start_page}|{batch_size}|{min_price}|{max_price}|{'_'.join(sorted(sources))}"
     cached = _cache_get(cache_key)
     if cached:
         print(f"[cache] HIT: {cache_key}")
@@ -84,22 +121,44 @@ def search():
     all_results = []
     has_more = False
 
+    # Bei aktivem Preisfilter mehr Seiten laden damit genug Treffer nach der Filterung übrig bleiben
+    effective_batch = batch_size * 2 if (min_price is not None or max_price is not None) else batch_size
+
     for source in sources:
         if source not in PROVIDERS:
             continue
-        results, more = PROVIDERS[source].search(
-            query, location=location, radius=radius,
-            start_page=start_page, batch_size=batch_size,
-            category=category, category_id=category_id
-        )
-        all_results.extend(results)
-        has_more = has_more or more
+        try:
+            results, more = PROVIDERS[source].search(
+                query, location=location, radius=radius,
+                start_page=start_page, batch_size=effective_batch,
+                category=category, category_id=category_id,
+                min_price=min_price, max_price=max_price
+            )
+            all_results.extend(results)
+            has_more = has_more or more
+        except Exception as e:
+            print(f"[{source}] Fehler beim Scraping: {e}")
+            continue
 
-    sorted_results = sorted(all_results, key=lambda x: x["price"])
+    # Preisfilter serverseitig anwenden
+    if min_price is not None:
+        all_results = [r for r in all_results if r.get("price", 0) >= min_price]
+    if max_price is not None:
+        all_results = [r for r in all_results if r.get("price", 0) <= max_price]
+
+    try:
+        sorted_results = sorted(all_results, key=lambda x: x.get("price", 0))
+    except Exception:
+        sorted_results = all_results
+
     response_data = {"results": sorted_results, "has_more": has_more}
     _cache_set(cache_key, response_data)
 
     return jsonify(response_data)
+
+  except Exception as e:
+    print(f"[search] Unerwarteter Fehler: {e}")
+    return jsonify({"error": str(e), "results": [], "has_more": False}), 500
 
 @app.route("/alerts", methods=["GET"])
 def get_alerts():

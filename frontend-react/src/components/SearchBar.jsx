@@ -23,13 +23,33 @@ export function SearchBar({
   onSearch, loading, activeCategory, onClearCategory,
   minPrice, maxPrice, onMinPriceChange, onMaxPriceChange,
   hasSearched, onSearchAlert, showImages, onShowImagesChange,
-  includeEbay, onIncludeEbayChange,
+  includeEbay, onIncludeEbayChange, currentQuery,
 }) {
   const [query, setQuery] = useState('')
+
+  // Suchbegriff von außen synchronisieren (z.B. PriceTicker-Klick)
+  useEffect(() => {
+    if (currentQuery !== undefined) setQuery(currentQuery)
+  }, [currentQuery])
   const [location, setLocation] = useState('')
   const [radius, setRadius] = useState(-1)
   const [isFocused, setIsFocused] = useState(false)
+  const [recentSearches, setRecentSearches] = useState([])
   const inputRef = useRef(null)
+
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('recent-searches') || '[]')
+      setRecentSearches(saved)
+    } catch { }
+  }, [])
+
+  const saveRecentSearch = (term) => {
+    if (!term.trim()) return
+    const updated = [term, ...recentSearches.filter(s => s !== term)].slice(0, 5)
+    setRecentSearches(updated)
+    localStorage.setItem('recent-searches', JSON.stringify(updated))
+  }
 
   const handleLocationChange = (e) => {
     const val = e.target.value
@@ -45,6 +65,7 @@ export function SearchBar({
   const handleSubmit = (e) => {
     e.preventDefault()
     if (query.trim() || activeCategory?.categoryId) {
+      if (query.trim()) saveRecentSearch(query.trim())
       const effectiveLocation = radius === -1 ? '' : location
       const effectiveRadius = radius === -1 ? 50 : radius
       const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
@@ -62,7 +83,7 @@ export function SearchBar({
             <span className="inline-flex items-center gap-1.5 bg-accent/15 border border-accent/25 text-[#a78bfa] text-[11px] font-semibold rounded-full px-3 py-1">
               {activeCategory.benchmarkType && <Zap className="w-3 h-3 text-amber-400" />}
               {activeCategory.label}
-              <button type="button" onClick={onClearCategory} className="ml-1 hover:text-white transition-colors cursor-pointer">
+              <button type="button" onClick={onClearCategory} className="ml-1 hover:text-foreground transition-colors cursor-pointer">
                 <X className="w-3 h-3" />
               </button>
             </span>
@@ -100,51 +121,73 @@ export function SearchBar({
             <button
               type="submit"
               disabled={loading || (!query.trim() && !activeCategory?.categoryId)}
-              className="flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_24px_rgba(0,229,255,0.35)] active:scale-95 active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 sm:px-6 text-sm font-semibold text-primary-foreground transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:shadow-[0_4px_24px_rgba(0,229,255,0.35)] active:scale-95 active:shadow-none disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} />}
-              Suchen
+              <span className="hidden sm:inline">Suchen</span>
             </button>
           </div>
         </div>
 
-        {/* Standort-Zeile (sekundär, unterhalb der Pill) */}
-        <div className="mt-3 flex items-center justify-center gap-3">
-          <div className="relative flex items-center">
-            <MapPin className="absolute left-3 w-3.5 h-3.5 text-muted-foreground" />
+        {/* Standort-Zeile */}
+        <div className="mt-4 flex items-center justify-center">
+          <div className="flex items-center gap-2 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.02)] px-3 py-2">
+            <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground shrink-0">Standort</span>
+            <div className="w-px h-3.5 bg-border" />
             <input
               type="text"
-              placeholder="PLZ oder Ort (optional)"
+              placeholder="PLZ oder Ort"
               value={location}
               onChange={handleLocationChange}
-              className="bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] rounded-full py-1.5 pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-[rgba(0,229,255,0.3)] transition-all w-44"
+              className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground/60 outline-none w-32"
             />
+            <div className="w-px h-3.5 bg-border" />
+            <select
+              value={radius}
+              onChange={(e) => setRadius(Number(e.target.value))}
+              disabled={!location.trim()}
+              className={`bg-transparent text-xs outline-none appearance-none transition-all ${!location.trim() ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-foreground/80 cursor-pointer'}`}
+            >
+              {RADIUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-card text-foreground">{opt.label}</option>
+              ))}
+            </select>
           </div>
-          <select
-            value={radius}
-            onChange={(e) => setRadius(Number(e.target.value))}
-            disabled={!location.trim()}
-            className={`bg-[rgba(255,255,255,0.03)] border border-[rgba(255,255,255,0.08)] rounded-full py-1.5 px-3 text-xs outline-none appearance-none transition-all ${!location.trim() ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-foreground cursor-pointer'}`}
-          >
-            {RADIUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value} className="bg-card text-foreground">{opt.label}</option>
-            ))}
-          </select>
         </div>
 
-        {/* Popular Search Tags — exakt v0 hero-search.tsx */}
+        {/* Letzte Suchen / Beliebt Tags */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-          <span className="mr-1 text-xs text-muted-foreground">Beliebt:</span>
-          {POPULAR_SEARCHES.map((term) => (
-            <button
-              key={term}
-              type="button"
-              onClick={() => { setQuery(term); inputRef.current?.focus() }}
-              className="rounded-full border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.03)] px-3.5 py-1.5 text-xs text-muted-foreground transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:border-[rgba(0,229,255,0.2)] hover:text-foreground hover:shadow-[0_4px_12px_rgba(0,229,255,0.08)] active:scale-95 active:shadow-none cursor-pointer"
-            >
-              {term}
-            </button>
-          ))}
+          {recentSearches.length > 0 ? (
+            <>
+              <span className="mr-1 text-xs text-muted-foreground">Zuletzt:</span>
+              {recentSearches.map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => { setQuery(term); inputRef.current?.focus() }}
+                  className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3.5 py-1.5 text-xs text-primary/80 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:text-primary active:scale-95 cursor-pointer"
+                >
+                  <span className="w-1 h-1 rounded-full bg-primary/60" />
+                  {term}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <span className="mr-1 text-xs text-muted-foreground">Beliebt:</span>
+              {POPULAR_SEARCHES.map((term) => (
+                <button
+                  key={term}
+                  type="button"
+                  onClick={() => { setQuery(term); inputRef.current?.focus() }}
+                  className="rounded-full border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.03)] px-3.5 py-1.5 text-xs text-muted-foreground transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:border-[rgba(0,229,255,0.2)] hover:text-foreground hover:shadow-[0_4px_12px_rgba(0,229,255,0.08)] active:scale-95 active:shadow-none cursor-pointer"
+                >
+                  {term}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       </form>
     )
@@ -158,7 +201,7 @@ export function SearchBar({
           <span className="inline-flex items-center gap-1.5 bg-accent/15 border border-accent/25 text-[#a78bfa] text-[11px] font-semibold rounded-full px-3 py-1">
             {activeCategory.benchmarkType && <Zap className="w-3 h-3 text-amber-400" />}
             {activeCategory.label}
-            <button type="button" onClick={onClearCategory} className="ml-1 hover:text-white transition-colors cursor-pointer">
+            <button type="button" onClick={onClearCategory} className="ml-1 hover:text-foreground transition-colors cursor-pointer">
               <X className="w-3 h-3" />
             </button>
           </span>

@@ -17,7 +17,7 @@ export function StatsBar({ results }) {
       {cards.map((card) => (
         <div
           key={card.label}
-          className="flex items-center gap-3 px-5 py-4 bg-[#050505] hover:bg-[rgba(255,255,255,0.02)] transition-colors"
+          className="flex items-center gap-3 px-5 py-4 bg-card hover:bg-foreground/[0.02] transition-colors"
         >
           <div
             className="p-2 rounded-lg"
@@ -26,7 +26,7 @@ export function StatsBar({ results }) {
             <card.icon className="w-4 h-4" style={{ color: card.color }} />
           </div>
           <div>
-            <p className="text-[10px] text-white/35 uppercase tracking-widest">{card.label}</p>
+            <p className="text-[10px] text-foreground/40 uppercase tracking-widest">{card.label}</p>
             <p className="text-base font-semibold font-mono" style={{ color: card.color }}>
               {card.value}
             </p>

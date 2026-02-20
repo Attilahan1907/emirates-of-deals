@@ -11,7 +11,7 @@ class EbayScraper(BaseScraper):
     API_ENDPOINT = "https://svcs.ebay.de/services/search/FindingService/v1"
     SCRAPE_URL = "https://www.ebay.de/sch/i.html"
 
-    def search(self, query, location="", radius=50, start_page=1, batch_size=3, category=None, category_id=None):
+    def search(self, query, location="", radius=50, start_page=1, batch_size=3, category=None, category_id=None, min_price=None, max_price=None):
         app_id = os.environ.get("EBAY_APP_ID", "").strip()
         if app_id:
             print(f"[ebay] Nutze Finding API")

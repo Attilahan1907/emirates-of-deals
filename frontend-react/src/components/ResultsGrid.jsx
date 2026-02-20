@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { ProductCard } from './ProductCard'
 import { computeDealScores } from '../utils/computeDealScore'
 
@@ -6,6 +7,22 @@ const BENCHMARK_TYPES = ['gpu', 'cpu', 'smartphone', 'ram']
 export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages, hasMore, loadingMore, onLoadMore }) {
   const hasBenchmark = BENCHMARK_TYPES.includes(benchmarkType)
   const scores = computeDealScores(results, benchmarkType)
+  const sentinelRef = useRef(null)
+
+  // Auto-load when sentinel element scrolls into view
+  useEffect(() => {
+    if (!sentinelRef.current) return
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          onLoadMore()
+        }
+      },
+      { rootMargin: '300px' }
+    )
+    observer.observe(sentinelRef.current)
+    return () => observer.disconnect()
+  }, [hasMore, loadingMore, onLoadMore])
 
   return (
     <>
@@ -25,27 +42,17 @@ export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col items-center gap-2">
-        {hasMore && (
-          <button
-            type="button"
-            onClick={onLoadMore}
-            disabled={loadingMore}
-            className="px-6 py-2.5 rounded-xl text-sm font-medium border border-white/15 bg-white/5 hover:bg-white/10 disabled:opacity-60 disabled:cursor-not-allowed text-white/70 transition-colors"
-          >
-            {loadingMore ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/20 border-t-white/60 rounded-full animate-spin inline-block" />
-                Lädt weitere Angebote…
-              </span>
-            ) : (
-              'Mehr laden'
-            )}
-          </button>
+      {/* Sentinel + Status */}
+      <div ref={sentinelRef} className="mt-6 flex flex-col items-center gap-2 pb-4">
+        {loadingMore && (
+          <span className="flex items-center gap-2 text-sm text-foreground/50">
+            <span className="w-4 h-4 border-2 border-foreground/20 border-t-foreground/60 rounded-full animate-spin inline-block" />
+            Lädt weitere Angebote…
+          </span>
         )}
         {results.length > 0 && (
-          <p className="text-white/30 text-xs">
-            {results.length} Angebote geladen{hasMore ? ' – es gibt noch mehr' : ' – alle geladen'}
+          <p className="text-foreground/30 text-xs">
+            {results.length} Angebote geladen{hasMore ? '' : ' – alle geladen'}
           </p>
         )}
       </div>

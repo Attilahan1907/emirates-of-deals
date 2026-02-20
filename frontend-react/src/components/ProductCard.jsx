@@ -49,13 +49,13 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
   return (
     <>
       <div
-        className={`group relative glass rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:bg-[rgba(255,255,255,0.04)] hover:border-[rgba(255,255,255,0.12)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.3)] active:scale-[0.99] active:shadow-none ${
+        className={`group relative glass rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:bg-foreground/5 hover:border-foreground/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] active:scale-[0.99] active:shadow-none ${
           isBest ? 'animate-pulse-glow border-emerald-glow/30' : ''
         }`}
       >
         {/* Produktbild */}
         {showImages && item.image && (
-          <div className="w-full h-40 rounded-xl overflow-hidden bg-white/5 -mx-0">
+          <div className="w-full h-40 rounded-xl overflow-hidden bg-foreground/5 -mx-0">
             <img
               src={item.image}
               alt={item.title}
@@ -73,7 +73,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
             className={`p-2 rounded-lg transition-all ${
               isFav
                 ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
-                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                : 'bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground/60'
             }`}
             title={isFav ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
           >
@@ -84,7 +84,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
             className={`p-2 rounded-lg transition-all ${
               favorite?.alertPrice
                 ? 'bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30'
-                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60'
+                : 'bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground/60'
             }`}
             title={favorite?.alertPrice ? `Alert bei ${favorite.alertPrice}€` : 'Preis-Alert einrichten'}
           >
@@ -98,7 +98,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
               className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${
                 isBest
                   ? 'bg-emerald-glow/20 text-emerald-glow'
-                  : 'bg-white/5 text-white/40'
+                  : 'bg-foreground/5 text-foreground/40'
               }`}
             >
               #{rank}
@@ -124,7 +124,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
           </div>
         </div>
 
-        <h3 className="text-sm font-medium text-white/90 line-clamp-2 leading-relaxed pr-16">
+        <h3 className="text-sm font-medium text-foreground/90 line-clamp-2 leading-relaxed pr-16">
           {item.title}
         </h3>
 
@@ -142,14 +142,18 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
               {formatPrice(item.price)}
             </p>
             {item.original && (
-              <p className="text-xs text-white/30 mt-0.5">{item.original}</p>
+              <p className="text-xs text-foreground/30 mt-0.5">{item.original}</p>
             )}
           </div>
           <a
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1.5 bg-neon-cyan/10 hover:bg-neon-cyan/20 border border-neon-cyan/20 text-neon-cyan text-xs font-medium rounded-lg py-2 px-3 transition-all whitespace-nowrap"
+            className={`flex items-center gap-1.5 text-xs font-medium rounded-lg py-2 px-3 transition-all whitespace-nowrap border ${
+              isBest
+                ? 'bg-[rgba(245,158,11,0.12)] hover:bg-[rgba(245,158,11,0.2)] border-[rgba(245,158,11,0.25)] text-[#f59e0b]'
+                : 'bg-neon-cyan/10 hover:bg-neon-cyan/20 border-neon-cyan/20 text-neon-cyan'
+            }`}
           >
             <ExternalLink className="w-3.5 h-3.5" />
             Zum Deal

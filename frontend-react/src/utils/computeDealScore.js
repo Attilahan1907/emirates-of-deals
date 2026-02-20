@@ -46,8 +46,15 @@ function computeBenchmarkScores(results, type) {
   const maxPP = Math.max(...validPPs)
   const range = maxPP - minPP
 
+  // Fallback-Preisrange für Einträge ohne Benchmark-Daten
+  const prices = results.map((r) => r.price)
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const priceRange = maxPrice - minPrice
+
   return scored.map((s) => {
     if (s.pricePerf === null) {
+      // Kein Benchmark-Match → kein Score anzeigen (verhindert falsche Bewertung von Zubehör)
       return { score: null, model: null, benchmark: null }
     }
     const score = range === 0 ? 50 : Math.round(((s.pricePerf - minPP) / range) * 100)
@@ -82,8 +89,14 @@ function computeRamScores(results) {
   const maxPPG = Math.max(...validPPGs)
   const range = maxPPG - minPPG
 
+  const prices = results.map((r) => r.price)
+  const minPrice = Math.min(...prices)
+  const maxPrice = Math.max(...prices)
+  const priceRange = maxPrice - minPrice
+
   return scored.map((s) => {
     if (s.pricePerGB === null) {
+      // Kein RAM erkannt → kein Score anzeigen
       return { score: null, model: null, benchmark: null }
     }
     // Invert: lower price/GB = higher score

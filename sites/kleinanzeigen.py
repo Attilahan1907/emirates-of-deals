@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sites.base_scraper import BaseScraper
 
@@ -108,7 +109,7 @@ def _parse_page(soup, query, category=None, has_category_id=False):
 class KleinanzeigenScraper(BaseScraper):
     SOURCE = "kleinanzeigen"
 
-    def search(self, query, location="", radius=50, start_page=1, batch_size=3, category=None, category_id=None):
+    def search(self, query, location="", radius=50, start_page=1, batch_size=3, category=None, category_id=None, min_price=None, max_price=None):
         query_encoded = query.replace(" ", "-") if query else ""
         location_encoded = location.strip().replace(" ", "-").lower()
         k_suffix = f"k0c{category_id}" if category_id else "k0"
@@ -132,10 +133,16 @@ class KleinanzeigenScraper(BaseScraper):
                     else f"https://www.kleinanzeigen.de/s-anzeigen/seite:{page}/{k_suffix}"
                 )
             try:
-                response = requests.get(url, headers=self.get_headers(), params=params, timeout=10)
+                self.random_delay(0.3, 0.9)
+                response = requests.get(url, headers=self.get_headers(), params=params, timeout=12)
+                if response.status_code == 429:
+                    print(f"[kleinanzeigen] Rate-limit (429) auf Seite {page} — kurze Pause")
+                    time.sleep(5)
+                    return page, []
                 soup = BeautifulSoup(response.text, "lxml")
                 return page, _parse_page(soup, query or "", category, bool(category_id))
-            except Exception:
+            except Exception as e:
+                print(f"[kleinanzeigen] Fehler Seite {page}: {e}")
                 return page, []
 
         pages = range(start_page, start_page + batch_size)

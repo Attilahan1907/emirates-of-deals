@@ -67,13 +67,13 @@ export function AlertsListDialog({ isOpen, onClose }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="glass rounded-2xl p-6 max-w-lg w-full border border-white/10 max-h-[80vh] flex flex-col">
+      <div className="glass rounded-2xl p-6 max-w-lg w-full border border-foreground/10 max-h-[80vh] flex flex-col">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Bell className="w-5 h-5 text-neon-cyan" />
-            <h3 className="text-lg font-bold text-white">Meine Alerts</h3>
+            <h3 className="text-lg font-bold text-foreground">Meine Alerts</h3>
             {totalCount > 0 && (
               <span className="bg-neon-cyan/20 text-neon-cyan text-xs font-bold px-2 py-0.5 rounded-full">
                 {totalCount} aktiv
@@ -84,12 +84,12 @@ export function AlertsListDialog({ isOpen, onClose }) {
             <button
               onClick={handleCheck}
               disabled={checking}
-              className="flex items-center gap-1.5 text-xs bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg px-3 py-1.5 text-white/60 hover:text-white transition-all disabled:opacity-50"
+              className="flex items-center gap-1.5 text-xs bg-foreground/5 hover:bg-foreground/10 border border-foreground/10 rounded-lg px-3 py-1.5 text-foreground/60 hover:text-foreground transition-all disabled:opacity-50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
               Jetzt prüfen
             </button>
-            <button onClick={onClose} className="text-white/40 hover:text-white/60 transition-colors">
+            <button onClick={onClose} className="text-foreground/40 hover:text-foreground/60 transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -102,44 +102,44 @@ export function AlertsListDialog({ isOpen, onClose }) {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all ${
               tab === 'price'
                 ? 'bg-neon-cyan/20 border-neon-cyan/50 text-neon-cyan'
-                : 'bg-white/5 border-white/10 text-white/50 hover:text-white/70'
+                : 'bg-foreground/5 border-foreground/10 text-foreground/50 hover:text-foreground/70'
             }`}
           >
             <Bell className="w-3.5 h-3.5" />
             Preisalarme
-            {active.length > 0 && <span className="bg-white/20 text-xs px-1.5 rounded-full">{active.length}</span>}
+            {active.length > 0 && <span className="bg-foreground/15 text-xs px-1.5 rounded-full">{active.length}</span>}
           </button>
           <button
             onClick={() => setTab('search')}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm border transition-all ${
               tab === 'search'
                 ? 'bg-neon-cyan/20 border-neon-cyan/50 text-neon-cyan'
-                : 'bg-white/5 border-white/10 text-white/50 hover:text-white/70'
+                : 'bg-foreground/5 border-foreground/10 text-foreground/50 hover:text-foreground/70'
             }`}
           >
             <Search className="w-3.5 h-3.5" />
             Suchalarme
-            {searchAlerts.length > 0 && <span className="bg-white/20 text-xs px-1.5 rounded-full">{searchAlerts.length}</span>}
+            {searchAlerts.length > 0 && <span className="bg-foreground/15 text-xs px-1.5 rounded-full">{searchAlerts.length}</span>}
           </button>
         </div>
 
         {/* Content */}
         <div className="overflow-y-auto flex-1 space-y-2 pr-1">
-          {loading && <p className="text-white/40 text-sm text-center py-8">Lade Alerts...</p>}
+          {loading && <p className="text-foreground/40 text-sm text-center py-8">Lade Alerts...</p>}
 
           {/* Preisalarme */}
           {!loading && tab === 'price' && (
             <>
               {alerts.length === 0 && (
                 <div className="text-center py-8">
-                  <Bell className="w-10 h-10 text-white/10 mx-auto mb-2" />
-                  <p className="text-white/40 text-sm">Noch keine Preisalarme.</p>
-                  <p className="text-white/25 text-xs mt-1">Klick auf 🔔 bei einem Produkt.</p>
+                  <Bell className="w-10 h-10 text-foreground/15 mx-auto mb-2" />
+                  <p className="text-foreground/40 text-sm">Noch keine Preisalarme.</p>
+                  <p className="text-foreground/25 text-xs mt-1">Klick auf 🔔 bei einem Produkt.</p>
                 </div>
               )}
               {active.length > 0 && (
                 <div>
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Aktiv</p>
+                  <p className="text-xs text-foreground/40 uppercase tracking-wider mb-2">Aktiv</p>
                   <div className="space-y-2">
                     {active.map((a) => <PriceAlertRow key={a.id} alert={a} onDelete={handleDeletePrice} />)}
                   </div>
@@ -147,7 +147,7 @@ export function AlertsListDialog({ isOpen, onClose }) {
               )}
               {triggered.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Ausgelöst</p>
+                  <p className="text-xs text-foreground/40 uppercase tracking-wider mb-2">Ausgelöst</p>
                   <div className="space-y-2">
                     {triggered.map((a) => <PriceAlertRow key={a.id} alert={a} onDelete={handleDeletePrice} triggered />)}
                   </div>
@@ -161,9 +161,9 @@ export function AlertsListDialog({ isOpen, onClose }) {
             <>
               {searchAlerts.length === 0 && (
                 <div className="text-center py-8">
-                  <Search className="w-10 h-10 text-white/10 mx-auto mb-2" />
-                  <p className="text-white/40 text-sm">Noch keine Suchalarme.</p>
-                  <p className="text-white/25 text-xs mt-1">Nach etwas suchen → "Suchalarm" klicken.</p>
+                  <Search className="w-10 h-10 text-foreground/15 mx-auto mb-2" />
+                  <p className="text-foreground/40 text-sm">Noch keine Suchalarme.</p>
+                  <p className="text-foreground/25 text-xs mt-1">Nach etwas suchen → "Suchalarm" klicken.</p>
                 </div>
               )}
               <div className="space-y-2">
@@ -181,26 +181,26 @@ export function AlertsListDialog({ isOpen, onClose }) {
 
 function PriceAlertRow({ alert, onDelete, triggered }) {
   return (
-    <div className={`flex items-center gap-3 p-3 rounded-lg border ${triggered ? 'bg-green-500/5 border-green-500/20' : 'bg-white/5 border-white/10'}`}>
+    <div className={`flex items-center gap-3 p-3 rounded-lg border ${triggered ? 'bg-green-500/5 border-green-500/20' : 'bg-foreground/5 border-foreground/10'}`}>
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white/80 truncate">{alert.title}</p>
+        <p className="text-sm text-foreground/80 truncate">{alert.title}</p>
         <div className="flex items-center gap-2 mt-0.5">
           {triggered ? (
             <span className="text-xs text-green-400">✓ Ausgelöst bei {alert.triggered_price?.toFixed(2)}€</span>
           ) : (
             <>
-              <span className="text-xs text-white/40">Aktuell: <span className="text-white/60">{alert.current_price?.toFixed(2)}€</span></span>
-              <span className="text-xs text-white/20">→</span>
+              <span className="text-xs text-foreground/40">Aktuell: <span className="text-foreground/60">{alert.current_price?.toFixed(2)}€</span></span>
+              <span className="text-xs text-foreground/20">→</span>
               <span className="text-xs text-neon-cyan">Alert: {alert.alert_price?.toFixed(2)}€</span>
             </>
           )}
         </div>
       </div>
       <div className="flex items-center gap-1 shrink-0">
-        <a href={alert.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-white/30 hover:text-white/60 transition-colors">
+        <a href={alert.url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-foreground/30 hover:text-foreground/60 transition-colors">
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
-        <button onClick={() => onDelete(alert.id)} className="p-1.5 text-white/30 hover:text-red-400 transition-colors">
+        <button onClick={() => onDelete(alert.id)} className="p-1.5 text-foreground/30 hover:text-red-400 transition-colors">
           <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -210,16 +210,16 @@ function PriceAlertRow({ alert, onDelete, triggered }) {
 
 function SearchAlertRow({ alert, onDelete }) {
   return (
-    <div className="flex items-center gap-3 p-3 rounded-lg border bg-white/5 border-white/10">
+    <div className="flex items-center gap-3 p-3 rounded-lg border bg-foreground/5 border-foreground/10">
       <Search className="w-4 h-4 text-neon-cyan shrink-0" />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-white/80 font-medium">"{alert.query}"</p>
+        <p className="text-sm text-foreground/80 font-medium">"{alert.query}"</p>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-neon-cyan">unter {alert.max_price?.toFixed(2)}€</span>
-          <span className="text-xs text-white/30">· {alert.seen_urls?.length || 0} bereits gesehen</span>
+          <span className="text-xs text-foreground/30">· {alert.seen_urls?.length || 0} bereits gesehen</span>
         </div>
       </div>
-      <button onClick={() => onDelete(alert.id)} className="p-1.5 text-white/30 hover:text-red-400 transition-colors shrink-0">
+      <button onClick={() => onDelete(alert.id)} className="p-1.5 text-foreground/30 hover:text-red-400 transition-colors shrink-0">
         <Trash2 className="w-3.5 h-3.5" />
       </button>
     </div>

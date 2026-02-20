@@ -86,15 +86,27 @@ def _setup_routine():
     print("=" * 50 + "\n")
 
 
+def _is_cloud_environment():
+    """Erkennt ob wir auf einem Cloud-Server laufen (kein interaktives Terminal)."""
+    cloud_indicators = [
+        'FLY_APP_NAME',       # Fly.io
+        'RAILWAY_ENVIRONMENT', # Railway
+        'RENDER',              # Render
+        'HEROKU_APP_NAME',     # Heroku
+        'PORT',                # Generisch: Cloud setzt PORT
+    ]
+    return any(os.environ.get(var) for var in cloud_indicators)
+
+
 def load_config():
     """
     Hauptfunktion: Lädt die Konfiguration oder startet die Setup-Routine.
     Muss als erstes in main.py aufgerufen werden.
-    Auf Railway sind Env-Vars bereits gesetzt → Setup überspringen.
+    Auf Cloud-Servern (Fly.io etc.) wird das interaktive Setup übersprungen.
     """
     if not ENV_FILE.exists():
-        if os.environ.get('TELEGRAM_BOT_TOKEN'):
-            # Auf Server (z.B. Railway) – Env-Vars bereits gesetzt, kein interaktives Setup
+        if _is_cloud_environment() or os.environ.get('TELEGRAM_BOT_TOKEN'):
+            # Auf Server – Env-Vars bereits gesetzt oder kein Terminal verfügbar
             ENV_FILE.touch()
         else:
             _setup_routine()

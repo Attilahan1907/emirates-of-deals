@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Header } from './components/Header'
 import { SearchBar } from './components/SearchBar'
 import { StatsBar } from './components/StatsBar'
+import { SortBar } from './components/SortBar'
 import { ResultsGrid } from './components/ResultsGrid'
 import { EmptyState } from './components/EmptyState'
 import { LoadingState } from './components/LoadingState'
@@ -11,14 +12,11 @@ import { SettingsDialog } from './components/SettingsDialog'
 import { AlertsListDialog } from './components/AlertsListDialog'
 import { SearchAlertDialog } from './components/SearchAlertDialog'
 import { useSearch } from './hooks/useSearch'
+import { computeDealScores } from './utils/computeDealScore'
+import { PriceTicker } from './components/PriceTicker'
+import { IOSInstallPrompt } from './components/IOSInstallPrompt'
+import { DealCounter } from './components/DealCounter'
 
-/* Statische Plattform-Statistiken — von v0 stats-bar.tsx */
-const PLATFORM_STATS = [
-  { value: '50K+', label: 'Produkte erfasst' },
-  { value: '120+', label: 'Shops verglichen' },
-  { value: '2M+', label: 'Preise gespart' },
-  { value: '99,9%', label: 'Verfügbarkeit' },
-]
 
 export default function App() {
   const [showWatchlist, setShowWatchlist] = useState(false)
@@ -32,24 +30,53 @@ export default function App() {
   const [maxPrice, setMaxPrice] = useState('')
   const [showImages, setShowImages] = useState(false)
   const [includeEbay, setIncludeEbay] = useState(true)
+  const [sortBy, setSortBy] = useState('price_asc')
 
-  const filteredResults = useMemo(() => {
-    const min = minPrice !== '' ? Number(minPrice) : 0
-    const max = maxPrice !== '' ? Number(maxPrice) : Infinity
-    return results.filter((r) => r.price >= min && r.price <= max)
-  }, [results, minPrice, maxPrice])
+  // Sortierung clientseitig (nach Eingang der Ergebnisse)
+  const sortedResults = useMemo(() => {
+    if (sortBy === 'price_asc')  return [...results].sort((a, b) => a.price - b.price)
+    if (sortBy === 'price_desc') return [...results].sort((a, b) => b.price - a.price)
+    if (sortBy === 'deal_score') {
+      const scores = computeDealScores(results, activeCategory?.benchmarkType || null)
+      return [...results]
+        .map((r, i) => ({ r, score: scores[i]?.score ?? -1 }))
+        .sort((a, b) => b.score - a.score)
+        .map(({ r }) => r)
+    }
+    return results // relevance: original scraper order
+  }, [results, sortBy, activeCategory])
+
+  // Bei Preisfilter-Änderung → neue Backend-Suche (700ms Debounce)
+  const priceDebounceRef = useRef(null)
+  const lastSearchParamsRef = useRef(null)
+  useEffect(() => {
+    if (!hasSearched || loading) return
+    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current)
+    priceDebounceRef.current = setTimeout(() => {
+      const p = lastSearchParamsRef.current
+      if (!p) return
+      search(p.query, p.location, p.radius, p.category, p.categoryId, p.sources, minPrice || null, maxPrice || null)
+    }, 700)
+    return () => clearTimeout(priceDebounceRef.current)
+  }, [minPrice, maxPrice])
 
   const handleCategorySelect = (subcategory) => {
     setActiveCategory(subcategory)
+    setSortBy('price_asc')
     const query = subcategory.defaultQuery || ''
     setLastQuery(query)
-    search(query, '', 50, subcategory.benchmarkType || null, subcategory.categoryId || null)
+    const params = { query, location: '', radius: 50, category: subcategory.benchmarkType || null, categoryId: subcategory.categoryId || null, sources: ['kleinanzeigen'] }
+    lastSearchParamsRef.current = params
+    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null)
   }
 
   const handleSearch = (query, location, radius, sources = ['kleinanzeigen']) => {
     const effectiveQuery = query.trim() || activeCategory?.defaultQuery || ''
     setLastQuery(effectiveQuery)
-    search(effectiveQuery, location, radius, activeCategory?.benchmarkType || null, activeCategory?.categoryId || null, sources)
+    setSortBy('price_asc')
+    const params = { query: effectiveQuery, location, radius, category: activeCategory?.benchmarkType || null, categoryId: activeCategory?.categoryId || null, sources }
+    lastSearchParamsRef.current = params
+    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null)
   }
 
   const handleReset = () => {
@@ -61,7 +88,7 @@ export default function App() {
 
   /* Ambient Glow — von v0 page.tsx */
   const ambientBg = (
-    <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
+    <div className="pointer-events-none fixed inset-0 overflow-hidden hidden md:block" aria-hidden="true">
       <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/[0.04] blur-[120px]" />
       <div className="absolute right-0 top-1/3 h-[400px] w-[400px] translate-x-1/2 rounded-full bg-accent/[0.03] blur-[100px]" />
     </div>
@@ -78,11 +105,12 @@ export default function App() {
   if (showWatchlist) {
     return (
       <div className="relative min-h-screen bg-background">
+        <IOSInstallPrompt />
         {ambientBg}
         <Header {...headerProps} onWatchlistClick={() => setShowWatchlist(false)} />
         <SettingsDialog isOpen={showSettings} onClose={() => setShowSettings(false)} />
         <AlertsListDialog isOpen={showAlerts} onClose={() => setShowAlerts(false)} />
-        <div className="relative z-10 pt-24">
+        <div className="relative z-10 pt-20 md:pt-36">
           <Watchlist />
         </div>
       </div>
@@ -93,6 +121,13 @@ export default function App() {
   if (!hasSearched && !loading) {
     return (
       <div className="relative min-h-screen bg-background">
+        <IOSInstallPrompt />
+        {/* Dot-Grid Hintergrund */}
+        <div
+          className="pointer-events-none fixed inset-0 dot-grid"
+          style={{ maskImage: 'radial-gradient(ellipse 80% 60% at 50% 0%, black 40%, transparent 100%)' }}
+          aria-hidden="true"
+        />
         {ambientBg}
         <Header {...headerProps} />
         <SettingsDialog isOpen={showSettings} onClose={() => setShowSettings(false)} />
@@ -100,7 +135,7 @@ export default function App() {
 
         <main className="relative z-10">
           {/* Hero Section — von v0 page.tsx */}
-          <section className="flex flex-col items-center justify-center px-6 pb-16 pt-32 md:pb-24 md:pt-44">
+          <section className="flex flex-col items-center justify-center px-6 pb-8 pt-24 md:pb-10 md:pt-48">
             {/* Badge */}
             <div className="mb-8 flex items-center gap-2 rounded-full border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -123,6 +158,9 @@ export default function App() {
               Schluss mit Überzahlen, fang an zu sparen.
             </p>
 
+            {/* Deal Counter */}
+            <DealCounter />
+
             {/* SearchBar (Hero-Modus) */}
             <div className="mt-10 w-full md:mt-12">
               <SearchBar
@@ -140,20 +178,11 @@ export default function App() {
             </div>
           </section>
 
-          {/* Statische Stats — von v0 page.tsx + stats-bar.tsx */}
-          <section className="px-6 pb-20 md:pb-28">
-            <div className="mx-auto grid w-full max-w-4xl grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.04)] md:grid-cols-4">
-              {PLATFORM_STATS.map((stat) => (
-                <div key={stat.label} className="flex flex-col items-center justify-center bg-[rgba(5,5,5,0.8)] px-6 py-6 text-center">
-                  <span className="text-2xl font-bold tracking-tight text-foreground">{stat.value}</span>
-                  <span className="mt-1 text-xs text-muted-foreground">{stat.label}</span>
-                </div>
-              ))}
-            </div>
-          </section>
+          {/* Preis-Ticker */}
+          <PriceTicker onSearch={handleSearch} />
 
-          {/* Kategorien — von v0 page.tsx */}
-          <section className="pb-24 md:pb-32">
+          {/* Kategorien */}
+          <section className="pb-16 md:pb-20">
             <CategoryGrid onCategorySelect={handleCategorySelect} />
           </section>
 
@@ -179,6 +208,7 @@ export default function App() {
   /* ── ERGEBNIS-SEITE (hasSearched || loading) ────────────────── */
   return (
     <div className="relative min-h-screen bg-background flex flex-col">
+      <IOSInstallPrompt />
       {ambientBg}
       <Header {...headerProps} />
       <SettingsDialog isOpen={showSettings} onClose={() => setShowSettings(false)} />
@@ -190,7 +220,7 @@ export default function App() {
         onOpenSettings={() => { setShowSearchAlert(false); setShowSettings(true) }}
       />
 
-      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12">
+      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 md:pt-36 pb-12">
         <SearchBar
           onSearch={handleSearch}
           loading={loading}
@@ -202,6 +232,7 @@ export default function App() {
           onSearchAlert={() => setShowSearchAlert(true)}
           showImages={showImages} onShowImagesChange={setShowImages}
           includeEbay={includeEbay} onIncludeEbayChange={setIncludeEbay}
+          currentQuery={lastQuery}
         />
 
         {error && (
@@ -212,11 +243,12 @@ export default function App() {
 
         {loading && <LoadingState />}
 
-        {!loading && hasSearched && filteredResults.length > 0 && (
+        {!loading && hasSearched && results.length > 0 && (
           <>
-            <StatsBar results={filteredResults} />
+            <StatsBar results={results} />
+            <SortBar sortBy={sortBy} onChange={setSortBy} />
             <ResultsGrid
-              results={filteredResults}
+              results={sortedResults}
               benchmarkType={activeCategory?.benchmarkType || null}
               onOpenSettings={() => setShowSettings(true)}
               showImages={showImages}
@@ -225,13 +257,6 @@ export default function App() {
               onLoadMore={loadMore}
             />
           </>
-        )}
-
-        {!loading && hasSearched && results.length > 0 && filteredResults.length === 0 && (
-          <div className="rounded-xl p-4 mt-6 border border-border bg-[rgba(255,255,255,0.02)] text-center">
-            <p className="text-foreground/50 text-sm">Keine Ergebnisse in dieser Preisspanne.</p>
-            <p className="text-muted-foreground text-xs mt-1">{results.length} Angebote außerhalb des Filters.</p>
-          </div>
         )}
 
         {!loading && hasSearched && results.length === 0 && !error && (

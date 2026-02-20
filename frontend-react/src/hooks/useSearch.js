@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import { searchProducts } from '../api/search'
 
-const BATCH_SIZE = 3
+const BATCH_SIZE = 5
 
 export function useSearch() {
   const [results, setResults] = useState([])
@@ -13,17 +13,17 @@ export function useSearch() {
   const nextPageRef = useRef(1)
   const searchParamsRef = useRef(null)
 
-  const search = useCallback(async (query, location = '', radius = 50, category = null, categoryId = null, sources = ['kleinanzeigen']) => {
+  const search = useCallback(async (query, location = '', radius = 50, category = null, categoryId = null, sources = ['kleinanzeigen'], minPrice = null, maxPrice = null) => {
     if (!query.trim() && !categoryId) return
 
     setLoading(true)
     setError(null)
     setHasSearched(true)
     nextPageRef.current = 1 + BATCH_SIZE
-    searchParamsRef.current = { query, location, radius, category, categoryId, sources }
+    searchParamsRef.current = { query, location, radius, category, categoryId, sources, minPrice, maxPrice }
 
     try {
-      const data = await searchProducts(query, location, radius, category, categoryId, 1, BATCH_SIZE, sources)
+      const data = await searchProducts(query, location, radius, category, categoryId, 1, BATCH_SIZE, sources, minPrice, maxPrice)
       setResults(data.results || [])
       setHasMore(data.has_more || false)
     } catch (err) {
@@ -39,11 +39,11 @@ export function useSearch() {
     if (!searchParamsRef.current || loadingMore) return
 
     setLoadingMore(true)
-    const { query, location, radius, category, categoryId, sources } = searchParamsRef.current
+    const { query, location, radius, category, categoryId, sources, minPrice, maxPrice } = searchParamsRef.current
     const startPage = nextPageRef.current
 
     try {
-      const data = await searchProducts(query, location, radius, category, categoryId, startPage, BATCH_SIZE, sources)
+      const data = await searchProducts(query, location, radius, category, categoryId, startPage, BATCH_SIZE, sources, minPrice, maxPrice)
       setResults(prev => [...prev, ...(data.results || [])])
       setHasMore(data.has_more || false)
       nextPageRef.current = startPage + BATCH_SIZE
