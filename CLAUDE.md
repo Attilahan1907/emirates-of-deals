@@ -198,7 +198,20 @@ Kein Scraper macht Requests ohne diese Sicherheitsschicht.
 - [ ] Sortierung der Ergebnisse (Preis ↑↓, Deal-Score, neueste zuerst)
 - [ ] Zustand-Filter ("Neu"/"Gebraucht")
 - [ ] Watchlist-Export als JSON/CSV
-- [ ] Weitere Plattformen (willhaben.at, eBay)
+- [ ] Weitere Plattformen (willhaben.at)
+
+**Geplant: Produkt-Detailseite (3 Phasen)**
+- [ ] **Phase 1** — ProductDetailModal (nur Frontend, kein Backend nötig)
+  - Mobile: Fullscreen CSS Modal, Slide-in von unten
+  - Desktop: 2-Spalten-Modal (Bild links, Infos rechts), ESC/Klick-außen zum Schließen
+  - Inhalt: Hero-Bild, Titel, Preis, DealScore, "-X% unter Durchschnitt" Badge, Min/Avg/Max Stats, CTA-Button
+  - Design: bestehendes Dark-Theme (glass, neon-cyan, Tailwind-Klassen)
+  - Dateien: neu `ProductDetailModal.jsx`, ändern `ProductCard.jsx`, `ResultsGrid.jsx`
+- [ ] **Phase 2** — Location + Datum scrapen (Backend)
+  - `sites/kleinanzeigen.py` → location + date aus HTML
+  - `sites/ebay.py` → itemLocation aus Browse API Response
+- [ ] **Phase 3** — Preisverlauf Chart (großer Aufwand, eigener Sprint)
+  - SQLite Preishistorie + recharts Library + neuer API-Endpunkt
 
 ---
 

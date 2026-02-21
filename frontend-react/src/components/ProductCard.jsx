@@ -104,9 +104,13 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
               #{rank}
             </span>
             {isBest && <BestDealBadge />}
-            {item.source === 'ebay' && (
+            {item.source === 'ebay' ? (
               <span className="text-[9px] font-semibold bg-amber-400/15 text-amber-400 border border-amber-400/20 rounded-full px-2 py-0.5">
                 eBay
+              </span>
+            ) : (
+              <span className="text-[9px] font-semibold bg-emerald-400/10 text-emerald-400/70 border border-emerald-400/15 rounded-full px-2 py-0.5">
+                Kleinanzeigen
               </span>
             )}
           </div>

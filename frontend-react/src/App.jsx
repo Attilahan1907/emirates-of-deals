@@ -60,12 +60,25 @@ export default function App() {
     return () => clearTimeout(priceDebounceRef.current)
   }, [minPrice, maxPrice])
 
+  // Bei eBay-Toggle → sofort neu suchen
+  const isFirstRender = useRef(true)
+  useEffect(() => {
+    if (isFirstRender.current) { isFirstRender.current = false; return }
+    if (!hasSearched || loading) return
+    const p = lastSearchParamsRef.current
+    if (!p) return
+    const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
+    const updatedParams = { ...p, sources }
+    lastSearchParamsRef.current = updatedParams
+    search(updatedParams.query, updatedParams.location, updatedParams.radius, updatedParams.category, updatedParams.categoryId, sources, minPrice || null, maxPrice || null)
+  }, [includeEbay])
+
   const handleCategorySelect = (subcategory) => {
     setActiveCategory(subcategory)
     setSortBy('price_asc')
     const query = subcategory.defaultQuery || ''
     setLastQuery(query)
-    const params = { query, location: '', radius: 50, category: subcategory.benchmarkType || null, categoryId: subcategory.categoryId || null, sources: ['kleinanzeigen'] }
+    const params = { query, location: '', radius: 50, category: subcategory.benchmarkType || null, categoryId: subcategory.categoryId || null, sources: ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])] }
     lastSearchParamsRef.current = params
     search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null)
   }
