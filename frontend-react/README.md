@@ -1,16 +1,40 @@
-# React + Vite
+# Emirates of Deals — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + Tailwind CSS v4 Frontend.
 
-Currently, two official plugins are available:
+## Starten
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+npm run dev      # Dev-Server auf http://localhost:5173
+npm run build    # Production Build
+```
 
-## React Compiler
+## Struktur
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```
+src/
+  App.jsx                     # Haupt-App (Landing / Ergebnisse / Watchlist)
+  components/
+    SearchBar.jsx             # Hero + Compact Mode, KI-Parsing Badge
+    FilterPanel.jsx           # Preis, Zustand, Fotos, eBay, Kategorie-Filter
+    ProductCard.jsx           # Produktkarte (Favorit, Alarm, DealScore, Badge)
+    ProductDetailModal.jsx    # Detail-Modal, Swipe-Down Mobile, Preishistorie
+    ResultsGrid.jsx, SortBar.jsx, DealScore.jsx
+    PriceTicker.jsx, DealCounter.jsx
+    AlertDialog.jsx, SearchAlertDialog.jsx, AlertsListDialog.jsx
+    SettingsDialog.jsx        # Telegram + Scraper-Health-Dashboard
+    Watchlist.jsx
+  hooks/
+    useSearch.js, useFavorites.js, useNotificationSettings.jsx
+  utils/
+    computeDealScore.js, formatPrice.js, extractModel.js
+  data/
+    gpuBenchmarks.js, cpuBenchmarks.js, smartphoneBenchmarks.js, ramBenchmarks.js
+    categoryFilters.js
+  api/
+    search.js, alerts.js, searchAlerts.js
+```
 
-## Expanding the ESLint configuration
+## Proxy
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Vite leitet `/api/*` und `/search` automatisch an `http://localhost:5000` weiter.

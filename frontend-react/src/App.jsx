@@ -23,7 +23,7 @@ export default function App() {
   const [showAlerts, setShowAlerts] = useState(false)
   const [showSearchAlert, setShowSearchAlert] = useState(false)
   const [lastQuery, setLastQuery] = useState('')
-  const { results, loading, loadingMore, error, hasSearched, hasMore, search, loadMore, reset } = useSearch()
+  const { results, loading, loadingMore, error, hasSearched, hasMore, aiInsight, search, loadMore, reset } = useSearch()
   const [activeCategory, setActiveCategory] = useState(null)
   const [minPrice, setMinPrice] = useState('')
   const [maxPrice, setMaxPrice] = useState('')
@@ -288,6 +288,36 @@ export default function App() {
         )}
 
         {loading && <LoadingState />}
+
+        {!loading && hasSearched && aiInsight && (
+          <div className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-4 backdrop-blur-sm">
+            <div className="flex items-start gap-3">
+              <span className="text-xl leading-none mt-0.5" role="img" aria-label="KI">🤖</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-foreground leading-relaxed">{aiInsight.ai_summary}</p>
+                {aiInsight.best_deal_url && (
+                  <a
+                    href={aiInsight.best_deal_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-xs font-medium text-primary hover:underline"
+                  >
+                    Bester Deal ansehen →
+                  </a>
+                )}
+                {aiInsight.scam_warnings?.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {aiInsight.scam_warnings.map((w, i) => (
+                      <span key={i} className="rounded-full bg-red-500/15 border border-red-500/30 px-2.5 py-0.5 text-xs text-red-400">
+                        ⚠️ {w}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {!loading && hasSearched && results.length > 0 && (
           <>

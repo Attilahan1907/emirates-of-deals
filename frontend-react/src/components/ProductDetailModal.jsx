@@ -1,10 +1,13 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { X, ExternalLink, TrendingDown } from 'lucide-react'
 import { formatPrice } from '../utils/formatPrice'
 import { DealScore } from './DealScore'
 
 export function ProductDetailModal({ isOpen, onClose, item, dealScore, allPrices, benchmarkType, isBenchmark }) {
   const [visible, setVisible] = useState(false)
+  const touchStartY = useRef(null)
+  const [dragY, setDragY] = useState(0)
+  const [isDragging, setIsDragging] = useState(false)
 
   // Mount animation
   useEffect(() => {
@@ -46,6 +49,26 @@ export function ProductDetailModal({ isOpen, onClose, item, dealScore, allPrices
     if (e.target === e.currentTarget) handleClose()
   }, [handleClose])
 
+  const handleTouchStart = (e) => {
+    touchStartY.current = e.touches[0].clientY
+    setIsDragging(true)
+  }
+
+  const handleTouchMove = (e) => {
+    if (touchStartY.current === null) return
+    const delta = e.touches[0].clientY - touchStartY.current
+    if (delta > 0) setDragY(delta)
+  }
+
+  const handleTouchEnd = () => {
+    if (dragY > 100) {
+      handleClose()
+    }
+    setDragY(0)
+    setIsDragging(false)
+    touchStartY.current = null
+  }
+
   // Stats calculation
   const stats = useMemo(() => {
     const validPrices = allPrices.filter(p => p > 0)
@@ -79,14 +102,20 @@ export function ProductDetailModal({ isOpen, onClose, item, dealScore, allPrices
           w-full max-h-[92vh] overflow-y-auto overscroll-contain
           rounded-t-3xl md:rounded-2xl
           glass border-t border-foreground/10 md:border
-          transition-all duration-300 ease-out
           md:max-w-3xl md:mx-4
           ${visible
             ? 'translate-y-0 opacity-100 scale-100'
             : 'translate-y-full md:translate-y-0 md:scale-95 opacity-0'
           }
         `}
+        style={{
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: isDragging ? 'none' : 'all 0.3s ease-out',
+        }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {/* Mobile drag handle */}
         <div className="md:hidden flex justify-center pt-3 pb-1">

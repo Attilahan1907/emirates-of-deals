@@ -32,7 +32,7 @@ export function FilterPanel({ minPrice, maxPrice, onMinPriceChange, onMaxPriceCh
 
       {open && (
         <div className="mt-3 pt-3 border-t border-foreground/5 flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4 overflow-x-auto mobile-scroll-x">
             <div className="flex items-center gap-2">
               <Euro className="w-3.5 h-3.5 text-foreground/30" />
               <span className="text-[11px] text-foreground/40 mr-1">Preis</span>

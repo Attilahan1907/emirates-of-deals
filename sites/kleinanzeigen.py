@@ -19,6 +19,7 @@ def _parse_page(soup, query, category=None, has_category_id=False):
         href = title_tag.get("href", "")
         link = "https://www.kleinanzeigen.de" + href if href.startswith("/") else href
         price_text = price_tag.text.strip()
+        is_vb = "vb" in price_text.lower()
         price = PriceParser.parse(price_text)
         if price is None or price <= 1:
             continue
@@ -45,7 +46,7 @@ def _parse_page(soup, query, category=None, has_category_id=False):
             "title": title,
             "url": link,
             "price": price,
-            "original": f"€{price:.2f}",
+            "original": f"€{price:.2f} VB" if is_vb else f"€{price:.2f}",
             "image": image_url,
             "location": location_text,
             "date": date_text,

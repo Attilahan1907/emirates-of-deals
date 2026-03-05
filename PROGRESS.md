@@ -1,3 +1,81 @@
+## [05.03.2026] - Mobile UX + Modal Swipe-Down + Aufräumen
+
+### Was gemacht wurde:
+- **`ProductDetailModal.jsx`:** Touch-Handler (`handleTouchStart/Move/End`) + `dragY`/`isDragging` State + `useRef` für `touchStartY`; Modal-Panel bekommt `style.transform: translateY(dragY)` + `transition: none` während Drag; ab 100px Downward-Drag → `handleClose()`, danach Snap-Back
+- **`frontend-react/src/index.css`:** `.mobile-scroll-x` Utility-Klasse hinzugefügt (`-webkit-overflow-scrolling: touch`, `scrollbar-width: none`, `::-webkit-scrollbar { display: none }`)
+- **`FilterPanel.jsx`:** Filter-Container bekommt `overflow-x-auto mobile-scroll-x` für flüssiges horizontales Scrollen auf Mobile
+- **`CLAUDE.md`:** `willhaben.at` aus TODOs entfernt
+- **`onConditionChange`:** Bereits vollständig verdrahtet (kein Fix nötig)
+
+### Probleme/Besonderheiten:
+- Modal-Panel hatte `transition-all` im className — bei Drag wird `transition: none` via inline style überschrieben, danach 0.3s ease-out für Snap-Back
+- Klassen-basierte Transition und inline-style-Transition kombinieren sich korrekt (inline-style hat Vorrang)
+
+### Nächster Schritt:
+- Testen auf Mobile / DevTools Mobile Simulation
+- KI-Parsing auf echter Groq-API testen (GROQ_API_KEY nötig)
+
+### Dateien geändert:
+- `frontend-react/src/components/ProductDetailModal.jsx`
+- `frontend-react/src/components/FilterPanel.jsx`
+- `frontend-react/src/index.css`
+- `CLAUDE.md`
+
+## [05.03.2026] - KI-gestützte Suchanfrage-Analyse (Natural Language Query Parsing)
+
+### Was gemacht wurde:
+- **`main.py`:** `parse_natural_query(raw_query)` Funktion — sendet Query an Groq llama-3.3-70b, extrahiert `optimized_query`, `condition`, `min_price`, `max_price`, `detected`; neuer Endpunkt `POST /api/parse-query`
+- **`frontend-react/src/components/SearchBar.jsx`:** `handleSubmit` async gemacht; bei >= 2 Wörtern: KI-Parsing via `/api/parse-query`; Query-Feld, Condition, Min/MaxPrice werden automatisch befüllt; KI-Badge ("KI erkannt: Benziner, 4-Türer") in Hero- und Compact-Mode
+
+### Verifikation:
+1. Backend neu starten
+2. "Fiat Punto 2009 benziner 4 türen" eingeben → KI-Badge mit "Benziner", "4-Türer" erscheint
+3. Suchfeld zeigt optimierten Query "Fiat Punto 2009"
+4. "RTX 3080 unter 400€" → MaxPrice-Feld füllt sich auf 400
+5. Einfaches "iPhone" → kein KI-Badge, normale Suche
+
+### Voraussetzung:
+- `GROQ_API_KEY` in `.env` eintragen (benötigt für Parsing; ohne Key: normale Suche, kein Badge)
+
+### Nächster Schritt:
+- Testen mit komplexen Suchanfragen
+- Ggf. Zustand-Filter im FilterPanel mit `condition`-Prop verknüpfen (falls noch nicht vorhanden)
+
+### Dateien geändert:
+- `main.py`
+- `frontend-react/src/components/SearchBar.jsx`
+
+---
+
+## [05.03.2026] - KI-Deal-Analyse via Gemini API
+
+### Was gemacht wurde:
+- **`sites/utils.py`:** `"vb"` aus `PriceParser.EXCLUDE_KEYWORDS` entfernt → VB-Preise werden jetzt geparst
+- **`sites/kleinanzeigen.py`:** VB-Erkennung in `_parse_page()` — `is_vb`-Flag, `original`-Feld zeigt "VB" wenn zutreffend
+- **`requirements.txt`:** `google-generativeai>=0.8.0` hinzugefügt
+- **`main.py`:** `analyze_with_ai(listings)` Funktion — sendet Top-10-Listings an Gemini 2.0 Flash Lite, parst JSON-Antwort; in `/search`-Route: `ai_insight` wird nach Sortierung berechnet und in `response_data` + Cache gespeichert
+- **`useSearch.js`:** `aiInsight` State ergänzt, wird bei `search()` gesetzt und bei `reset()` geleert
+- **`App.jsx`:** AI-Banner zwischen SearchBar und SortBar — Glassmorphism-Card mit 🤖-Icon, Summary-Text, Best-Deal-Link und Scam-Warning-Pills
+
+### Env-Variable:
+- `GEMINI_API_KEY=AIza...` in `.env` eintragen (kostenlos: aistudio.google.com/apikey)
+- Ohne Key: `ai_insight` ist null, Banner wird nicht angezeigt
+
+### Nächster Schritt:
+- `pip install -r requirements.txt` ausführen
+- `.env` mit `GEMINI_API_KEY` ergänzen
+- Testen: RTX 3080 suchen → DevTools Response prüfen, AI-Banner sichtbar?
+
+### Dateien geändert:
+- `sites/utils.py`
+- `sites/kleinanzeigen.py`
+- `requirements.txt`
+- `main.py`
+- `frontend-react/src/hooks/useSearch.js`
+- `frontend-react/src/App.jsx`
+
+---
+
 ## [05.03.2026] - Autos-Filter: Marke (Logo-Grid), Baujahr ab, KM-Stand bis
 
 ### Was gemacht wurde:

@@ -83,7 +83,7 @@ def is_relevant(title, query, category=None, has_category_id=False):
 class PriceParser:
     """Robust price parsing for various formats found on classified sites."""
     
-    EXCLUDE_KEYWORDS = ["vb", "zu verschenken", "anfrage", "gesuch", "suche", "tausch"]
+    EXCLUDE_KEYWORDS = ["zu verschenken", "anfrage", "gesuch", "suche", "tausch"]
 
     @staticmethod
     def clean_text(text):

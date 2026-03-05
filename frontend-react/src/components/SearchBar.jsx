@@ -37,6 +37,8 @@ export function SearchBar({
   const [radius, setRadius] = useState(-1)
   const [isFocused, setIsFocused] = useState(false)
   const [recentSearches, setRecentSearches] = useState([])
+  const [aiParsing, setAiParsing] = useState(false)
+  const [aiDetected, setAiDetected] = useState([])
   const inputRef = useRef(null)
 
   useEffect(() => {
@@ -64,10 +66,37 @@ export function SearchBar({
     if (activeCategory) setQuery('')
   }, [activeCategory])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     if (query.trim() || activeCategory?.categoryId) {
-      if (query.trim()) saveRecentSearch(query.trim())
+      if (query.trim()) {
+        saveRecentSearch(query.trim())
+        // KI-Parsing nur bei komplexen Queries (>= 2 Wörter)
+        if (query.trim().split(/\s+/).length >= 2) {
+          setAiParsing(true)
+          try {
+            const res = await fetch('/api/parse-query', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: query.trim() }),
+            })
+            const parsed = await res.json()
+            if (parsed) {
+              if (parsed.optimized_query) setQuery(parsed.optimized_query)
+              if (parsed.condition) onConditionChange(parsed.condition)
+              if (parsed.max_price) onMaxPriceChange(String(parsed.max_price))
+              if (parsed.min_price) onMinPriceChange(String(parsed.min_price))
+              setAiDetected(parsed.detected || [])
+              const effectiveLocation = radius === -1 ? '' : location
+              const effectiveRadius = radius === -1 ? 50 : radius
+              const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
+              onSearch(parsed.optimized_query || query, effectiveLocation, effectiveRadius, sources)
+              return
+            }
+          } catch { /* fallthrough to normal search */ }
+          finally { setAiParsing(false) }
+        }
+      }
       const effectiveLocation = radius === -1 ? '' : location
       const effectiveRadius = radius === -1 ? 50 : radius
       const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
@@ -157,6 +186,24 @@ export function SearchBar({
             </select>
           </div>
         </div>
+
+        {/* KI-Parsing Badge */}
+        {aiParsing && (
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground justify-center">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            KI analysiert Suchanfrage...
+          </div>
+        )}
+        {!aiParsing && aiDetected.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 justify-center">
+            <span className="text-xs text-muted-foreground">KI erkannt:</span>
+            {aiDetected.map((attr, i) => (
+              <span key={i} className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                {attr}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Letzte Suchen / Beliebt Tags */}
         <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
@@ -268,6 +315,24 @@ export function SearchBar({
           </div>
         </div>
       </div>
+
+      {/* KI-Parsing Badge */}
+      {aiParsing && (
+        <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Loader2 className="h-3 w-3 animate-spin" />
+          KI analysiert Suchanfrage...
+        </div>
+      )}
+      {!aiParsing && aiDetected.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">KI erkannt:</span>
+          {aiDetected.map((attr, i) => (
+            <span key={i} className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs text-primary">
+              {attr}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center justify-between mt-3">
         <FilterPanel

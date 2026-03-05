@@ -10,6 +10,7 @@ export function useSearch() {
   const [error, setError] = useState(null)
   const [hasSearched, setHasSearched] = useState(false)
   const [hasMore, setHasMore] = useState(false)
+  const [aiInsight, setAiInsight] = useState(null)
   const nextPageRef = useRef(1)
   const searchParamsRef = useRef(null)
 
@@ -26,6 +27,7 @@ export function useSearch() {
       const data = await searchProducts(query, location, radius, category, categoryId, 1, BATCH_SIZE, sources, minPrice, maxPrice, categoryFilters, condition)
       setResults(data.results || [])
       setHasMore(data.has_more || false)
+      setAiInsight(data.ai_insight || null)
     } catch (err) {
       setError(err.message || 'Ein Fehler ist aufgetreten')
       setResults([])
@@ -59,6 +61,7 @@ export function useSearch() {
     setError(null)
     setHasSearched(false)
     setHasMore(false)
+    setAiInsight(null)
     nextPageRef.current = 1
     searchParamsRef.current = null
   }, [])
@@ -70,6 +73,7 @@ export function useSearch() {
     error,
     hasSearched,
     hasMore,
+    aiInsight,
     search,
     loadMore,
     reset,

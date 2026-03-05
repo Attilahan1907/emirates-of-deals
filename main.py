@@ -1,6 +1,13 @@
 from config import load_config
 load_config()  # .env laden oder Setup-Routine starten – muss als erstes passieren
 
+import re as _re
+try:
+    from groq import Groq as _Groq
+    _GROQ_AVAILABLE = True
+except ImportError:
+    _GROQ_AVAILABLE = False
+
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_compress import Compress
@@ -22,6 +29,91 @@ import time
 import os
 import json
 from collections import deque
+
+def analyze_with_ai(listings):
+    """Analysiert die Top-Listings mit Groq und gibt ein strukturiertes Insight zurück."""
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key or not _GROQ_AVAILABLE or not listings:
+        return None
+    try:
+        client = _Groq(api_key=api_key)
+        compact = [
+            {"title": l.get("title", ""), "price": l.get("price", 0), "original": l.get("original", ""), "url": l.get("url", "")}
+            for l in listings[:10]
+        ]
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Du bist ein Preisanalyse-Experte für Gebrauchtwaren auf deutschen Plattformen. "
+                        "Analysiere die Listings und antworte NUR mit einem JSON-Objekt (kein Markdown, keine Erklärungen). "
+                        "Das JSON muss folgende Felder haben: "
+                        "\"ai_summary\" (string, 1-2 Sätze: welcher Deal am besten ist und warum), "
+                        "\"best_deal_url\" (string, URL des besten Deals oder null), "
+                        "\"scam_warnings\" (array of strings, Warnungen zu verdächtig günstigen oder teuren Angeboten, leer wenn keine). "
+                        "Bei VB-Preisen: rechne 10-15% Rabatt ein. "
+                        "Antworte auf Deutsch."
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"Analysiere diese Kleinanzeigen-Listings und finde den besten Deal:\n{json.dumps(compact, ensure_ascii=False)}"
+                }
+            ],
+            temperature=0.3,
+            max_tokens=500,
+        )
+        text = response.choices[0].message.content.strip()
+        match = _re.search(r'\{[\s\S]*\}', text)
+        if match:
+            return json.loads(match.group(0))
+    except Exception as e:
+        print(f"[ai] Analyse fehlgeschlagen: {e}")
+    return None
+
+
+def parse_natural_query(raw_query):
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key or not _GROQ_AVAILABLE or not raw_query.strip():
+        return None
+    try:
+        client = _Groq(api_key=api_key)
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Du bist ein Suchbegriff-Parser für eine deutsche Kleinanzeigen-Plattform. "
+                        "Analysiere den Suchbegriff des Nutzers und antworte NUR mit einem JSON-Objekt. "
+                        "Felder: "
+                        "\"optimized_query\" (string, bereinigter Suchbegriff ohne Filter-Attribute), "
+                        "\"condition\" (string, \"gebraucht\" | \"neu\" | \"\"), "
+                        "\"min_price\" (number oder null), "
+                        "\"max_price\" (number oder null), "
+                        "\"detected\" (array of strings, kurze Stichworte der erkannten Attribute auf Deutsch, leer wenn nichts erkannt). "
+                        "Beispiel Input: \"Fiat Punto 2009 benziner 4 türen\" "
+                        "Beispiel Output: {\"optimized_query\": \"Fiat Punto 2009\", \"condition\": \"gebraucht\", \"min_price\": null, \"max_price\": null, \"detected\": [\"Benziner\", \"4-Türer\"]}. "
+                        "Beispiel Input: \"RTX 3080 unter 400 Euro\" "
+                        "Beispiel Output: {\"optimized_query\": \"RTX 3080\", \"condition\": \"\", \"min_price\": null, \"max_price\": 400, \"detected\": [\"max. 400€\"]}. "
+                        "Nur antworten wenn wirklich etwas extrahierbar ist — bei einfachen Queries wie \"iPhone\" alles null/leer lassen."
+                    )
+                },
+                {"role": "user", "content": raw_query}
+            ],
+            temperature=0.1,
+            max_tokens=150,
+        )
+        text = response.choices[0].message.content.strip()
+        match = _re.search(r'\{[\s\S]*\}', text)
+        if match:
+            return json.loads(match.group(0))
+    except Exception as e:
+        print(f"[ai] Query-Parsing fehlgeschlagen: {e}")
+    return None
+
 
 # In-memory ring buffer for recently seen items (max 60)
 _recent_items = deque(maxlen=60)
@@ -194,7 +286,8 @@ def search():
         all_results.sort(key=lambda r: r.get("price", 0), reverse=True)
     sorted_results = all_results
 
-    response_data = {"results": sorted_results, "has_more": has_more}
+    ai_insight = analyze_with_ai(sorted_results[:10])
+    response_data = {"results": sorted_results, "has_more": has_more, "ai_insight": ai_insight}
     _cache_set(cache_key, response_data)
 
     return jsonify(response_data)
@@ -344,6 +437,16 @@ def get_config():
     return jsonify({
         "ebay_available": bool(os.environ.get("EBAY_APP_ID"))
     })
+
+
+@app.route("/api/parse-query", methods=["POST"])
+def api_parse_query():
+    data = request.json or {}
+    raw_query = data.get("query", "").strip()
+    if not raw_query:
+        return jsonify(None)
+    result = parse_natural_query(raw_query)
+    return jsonify(result)
 
 
 @app.route("/api/health", methods=["GET"])

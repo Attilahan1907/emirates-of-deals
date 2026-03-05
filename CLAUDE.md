@@ -114,6 +114,9 @@ frontend-react/src/
 19. ✅ **PostgreSQL-Support** — automatische URL-Erkennung, Migrations-Skript
 20. ✅ **Web-Push / PWA** — Push-Subscriptions in DB, iOS-Install-Prompt
 21. ✅ **Proxy-Rotation** — BaseScraper unterstützt PROXY_LIST Umgebungsvariable
+22. ✅ **KI-Suchanfrage-Parser** — Groq llama-3.3-70b: optimized_query, condition, min/max_price, detected-Stichworte; `/api/parse-query` Endpunkt; KI-Badge in SearchBar (Hero + Compact)
+23. ✅ **Modal Swipe-Down** — ProductDetailModal: Touch-Handler, 100px Threshold → schließen, Snap-Back
+24. ✅ **Zustand-Filter** — FilterPanel Dropdown (Alle/Gebraucht/Neu), onConditionChange vollständig verdrahtet
 
 ---
 
@@ -219,7 +222,6 @@ Kein Scraper macht Requests ohne diese Sicherheitsschicht.
 **Nice to have:**
 - [ ] Zustand-Filter ("Neu"/"Gebraucht") — noch nicht implementiert
 - [ ] Watchlist-Export als JSON/CSV
-- [ ] Weitere Plattformen (willhaben.at)
 - [ ] Location + Datum scrapen: `sites/kleinanzeigen.py` → location/date aus HTML; `sites/ebay.py` → itemLocation aus API-Response
 
 **Bereits erledigt (nicht mehr TODO):**
@@ -227,6 +229,10 @@ Kein Scraper macht Requests ohne diese Sicherheitsschicht.
 - ✅ Sortierung — SortBar (Preis ↑↓, Deal-Score, Relevanz)
 - ✅ ProductDetailModal — vollständig implementiert
 - ✅ Preisverlauf-Chart — SVG-basiert in ProductDetailModal
+- ✅ KI-Suchanfrage-Parser — Groq llama-3.3-70b, `/api/parse-query`, KI-Badge in SearchBar
+- ✅ Modal Swipe-Down — Touch-Handler in ProductDetailModal, 100px Threshold, Snap-Back
+- ✅ FilterPanel Mobile-Scroll — `overflow-x-auto mobile-scroll-x` für Touch-Geräte
+- ✅ Zustand-Filter — FilterPanel Dropdown, onConditionChange verdrahtet
 
 ---
 
