@@ -87,10 +87,15 @@ export function SearchBar({
               if (parsed.max_price) onMaxPriceChange(String(parsed.max_price))
               if (parsed.min_price) onMinPriceChange(String(parsed.min_price))
               setAiDetected(parsed.detected || [])
-              const effectiveLocation = radius === -1 ? '' : location
-              const effectiveRadius = radius === -1 ? 50 : radius
+              // Ort + Umkreis aus KI übernehmen
+              const aiLocation = parsed.location || ''
+              const aiRadius = parsed.radius ?? null
+              if (aiLocation) setLocation(aiLocation)
+              if (aiRadius !== null) setRadius(aiRadius)
+              const finalLocation = aiLocation || (radius === -1 ? '' : location)
+              const finalRadius = aiRadius !== null ? aiRadius : (radius === -1 ? 50 : radius)
               const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
-              onSearch(parsed.optimized_query || query, effectiveLocation, effectiveRadius, sources)
+              onSearch(parsed.optimized_query || query, finalLocation, finalRadius, sources)
               return
             }
           } catch { /* fallthrough to normal search */ }

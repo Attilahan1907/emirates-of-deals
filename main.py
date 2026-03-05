@@ -89,22 +89,28 @@ def parse_natural_query(raw_query):
                         "Du bist ein Suchbegriff-Parser für eine deutsche Kleinanzeigen-Plattform. "
                         "Analysiere den Suchbegriff des Nutzers und antworte NUR mit einem JSON-Objekt. "
                         "Felder: "
-                        "\"optimized_query\" (string, bereinigter Suchbegriff ohne Filter-Attribute), "
+                        "\"optimized_query\" (string, bereinigter Suchbegriff ohne Filter-Attribute und ohne Ortsangaben), "
                         "\"condition\" (string, \"gebraucht\" | \"neu\" | \"\"), "
                         "\"min_price\" (number oder null), "
                         "\"max_price\" (number oder null), "
+                        "\"location\" (string, erkannter Ort/Stadt/PLZ oder \"\"), "
+                        "\"radius\" (number oder null, Umkreis in km wenn explizit genannt z.B. '100km' oder 'umkreis 50', sonst null), "
                         "\"detected\" (array of strings, kurze Stichworte der erkannten Attribute auf Deutsch, leer wenn nichts erkannt). "
+                        "Beispiel Input: \"mercedes c180 in nürnberg\" "
+                        "Beispiel Output: {\"optimized_query\": \"Mercedes C180\", \"condition\": \"\", \"min_price\": null, \"max_price\": null, \"location\": \"nürnberg\", \"radius\": null, \"detected\": [\"Nürnberg\"]}. "
+                        "Beispiel Input: \"mercedes c180 in nürnberg umkreis 100km\" "
+                        "Beispiel Output: {\"optimized_query\": \"Mercedes C180\", \"condition\": \"\", \"min_price\": null, \"max_price\": null, \"location\": \"nürnberg\", \"radius\": 100, \"detected\": [\"Nürnberg\", \"100 km Umkreis\"]}. "
                         "Beispiel Input: \"Fiat Punto 2009 benziner 4 türen\" "
-                        "Beispiel Output: {\"optimized_query\": \"Fiat Punto 2009\", \"condition\": \"gebraucht\", \"min_price\": null, \"max_price\": null, \"detected\": [\"Benziner\", \"4-Türer\"]}. "
+                        "Beispiel Output: {\"optimized_query\": \"Fiat Punto 2009\", \"condition\": \"gebraucht\", \"min_price\": null, \"max_price\": null, \"location\": \"\", \"radius\": null, \"detected\": [\"Benziner\", \"4-Türer\"]}. "
                         "Beispiel Input: \"RTX 3080 unter 400 Euro\" "
-                        "Beispiel Output: {\"optimized_query\": \"RTX 3080\", \"condition\": \"\", \"min_price\": null, \"max_price\": 400, \"detected\": [\"max. 400€\"]}. "
+                        "Beispiel Output: {\"optimized_query\": \"RTX 3080\", \"condition\": \"\", \"min_price\": null, \"max_price\": 400, \"location\": \"\", \"radius\": null, \"detected\": [\"max. 400€\"]}. "
                         "Nur antworten wenn wirklich etwas extrahierbar ist — bei einfachen Queries wie \"iPhone\" alles null/leer lassen."
                     )
                 },
                 {"role": "user", "content": raw_query}
             ],
             temperature=0.1,
-            max_tokens=150,
+            max_tokens=200,
         )
         text = response.choices[0].message.content.strip()
         match = _re.search(r'\{[\s\S]*\}', text)
