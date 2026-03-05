@@ -1,0 +1,15 @@
+{
+  "short_name": "EmiratesDeals",
+  "name": "Emirates of Deals",
+  "icons": [
+    {
+      "src": "/logos/logo-emirates-horizontal.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#00e5ff",
+  "background_color": "#0f172a"
+}

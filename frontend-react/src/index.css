@@ -101,6 +101,10 @@
   background-image: radial-gradient(circle, rgba(0,0,0,0.06) 1px, transparent 1px);
 }
 
+/* Logo Swapping */
+[data-theme="light"] .dark-logo { display: none !important; }
+[data-theme="light"] .light-logo { display: block !important; }
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

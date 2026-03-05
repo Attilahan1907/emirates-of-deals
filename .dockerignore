@@ -1,41 +1,40 @@
-# flyctl launch added from .gitignore
-**\__pycache__
-**\*.pyc
-**\.claude
+# General Ignore
+**/.git
+**/.github
+**/.vscode
+**/.idea
+**/.DS_Store
+**/*.suo
+**/*.ntvs*
+**/*.njsproj
+**/*.sln
+**/*.sw?
 
-# Sensible Konfiguration – niemals committen
-**\.env
-**\price_alerts.json
+# Python
+**/__pycache__
+**/*.pyc
+**/.claude
+venv/
+.venv/
 
-# Build-Artefakte
-**\frontend-react\node_modules
-**\frontend-react\dist
-**\node_modules
-**\.fly
+# Environment & Secrets (Never upload these)
+**/.env
+**/price_alerts.json
 
-# flyctl launch added from frontend-react\.gitignore
-# Logs
-frontend-react\**\logs
-frontend-react\**\*.log
-frontend-react\**\npm-debug.log*
-frontend-react\**\yarn-debug.log*
-frontend-react\**\yarn-error.log*
-frontend-react\**\pnpm-debug.log*
-frontend-react\**\lerna-debug.log*
-
-frontend-react\**\node_modules
-frontend-react\**\dist
-frontend-react\**\dist-ssr
-frontend-react\**\*.local
-
-# Editor directories and files
-frontend-react\**\.vscode\*
-!frontend-react\**\.vscode\extensions.json
-frontend-react\**\.idea
-frontend-react\**\.DS_Store
-frontend-react\**\*.suo
-frontend-react\**\*.ntvs*
-frontend-react\**\*.njsproj
-frontend-react\**\*.sln
-frontend-react\**\*.sw?
+# Build Artifacts & Logs
+node_modules/
+.fly/
 fly.toml
+**/logs
+**/*.log
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/pnpm-debug.log*
+**/lerna-debug.log*
+
+# Frontend Specific (Ignore only the build output and modules)
+frontend-react/node_modules/
+frontend-react/dist/
+frontend-react/dist-ssr/
+frontend-react/*.local

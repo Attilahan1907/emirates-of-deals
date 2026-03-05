@@ -34,18 +34,27 @@ export function Header({ onLogoClick, onWatchlistClick, onSettingsClick, onAlert
       <nav className={`mx-auto flex max-w-7xl items-center justify-between px-4 md:px-6 transition-all duration-300 ${scrolled ? 'py-1.5' : 'py-2 md:py-4'}`}>
 
         {/* ── Logo ── */}
-        <button onClick={onLogoClick} className="group flex shrink-0 cursor-pointer">
+        <button onClick={onLogoClick} className="group flex shrink-0 cursor-pointer items-center">
           <img
-            src="/logos/logo-crown.svg"
+            src={theme === 'dark' ? "/logos/logo-emirates-horizontal.svg" : "/logos/logo-emirates-horizontal-light.svg"}
             alt="Emirates of Deals"
-            className={`w-auto object-contain group-hover:opacity-85 transition-all duration-300 ${
-              scrolled ? 'h-12' : 'h-20 md:h-36'
+            className={`w-auto object-contain group-hover:opacity-85 transition-all duration-300 md:hidden ${
+              scrolled ? 'h-10' : 'h-12'
+            }`}
+          />
+          <img
+            src={scrolled 
+              ? (theme === 'dark' ? "/logos/logo-emirates-horizontal.svg" : "/logos/logo-emirates-horizontal-light.svg")
+              : (theme === 'dark' ? "/logos/logo-emirates.svg" : "/logos/logo-emirates-light.svg")}
+            alt="Emirates of Deals"
+            className={`hidden md:block w-auto object-contain group-hover:opacity-85 transition-all duration-300 ${
+              scrolled ? 'h-12' : 'h-24 lg:h-32'
             }`}
           />
         </button>
 
         {/* ── Desktop: Pill Nav (rechts) ── */}
-        <div className="hidden md:flex items-center gap-0.5 rounded-full border border-[rgba(255,255,255,0.06)] bg-[rgba(10,10,10,0.6)] px-3 py-2 backdrop-blur-xl">
+        <div className="hidden md:flex items-center gap-0.5 rounded-full border border-border bg-card/60 px-3 py-2 backdrop-blur-xl shadow-sm">
           {navLinks.map((link) => (
             <a key={link.label} href={link.href}
               className="rounded-full px-4 py-1.5 text-sm text-muted-foreground transition-colors duration-200 hover:text-foreground">
@@ -84,7 +93,7 @@ export function Header({ onLogoClick, onWatchlistClick, onSettingsClick, onAlert
 
         {/* ── Mobile: Hamburger ── */}
         <button
-          className="flex md:hidden h-9 w-9 items-center justify-center rounded-full border border-[rgba(255,255,255,0.06)] bg-[rgba(10,10,10,0.92)] text-muted-foreground transition-colors hover:text-foreground"
+          className="flex md:hidden h-9 w-9 items-center justify-center rounded-full border border-border bg-card/90 text-muted-foreground transition-colors hover:text-foreground"
           onClick={() => setMobileOpen(!mobileOpen)}
           aria-label={mobileOpen ? 'Menü schließen' : 'Menü öffnen'}>
           {mobileOpen ? <X size={18} /> : <Menu size={18} />}
@@ -93,7 +102,7 @@ export function Header({ onLogoClick, onWatchlistClick, onSettingsClick, onAlert
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="mx-6 mt-1 rounded-2xl border border-[rgba(255,255,255,0.06)] bg-[rgba(10,10,10,0.97)] p-4 md:hidden">
+        <div className="mx-6 mt-1 rounded-2xl border border-border bg-card/95 p-4 md:hidden shadow-xl backdrop-blur-md">
           <div className="flex flex-col gap-1">
             {navLinks.map((link) => (
               <a key={link.label} href={link.href}

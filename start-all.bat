@@ -27,39 +27,35 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Starting Flask Backend Server...
-start "Emirates of Deals Backend" cmd /k "cd /d %~dp0 && python main.py"
-
-REM Wait a moment for backend to start
-timeout /t 3 /nobreak >nul
-
-echo [2/2] Starting React Frontend Server...
-cd frontend-react
-
 REM Check if node_modules exists
-if not exist "node_modules" (
+if not exist "frontend-react\node_modules" (
     echo [INFO] Installing frontend dependencies...
+    cd frontend-react
     call npm install
     if errorlevel 1 (
         echo [ERROR] Failed to install dependencies!
         pause
         exit /b 1
     )
+    cd /d "%~dp0"
 )
 
-start "Emirates of Deals Frontend" cmd /k "cd /d %~dp0frontend-react && npm run dev"
+echo [1/2] Starting Flask Backend Server...
+echo [2/2] Starting React Frontend Server...
+echo.
 
-echo.
+REM Start both in one Windows Terminal window with tabs
+set "ROOT=%~dp0"
+set "ROOT=%ROOT:~0,-1%"
+wt -w Emirates new-tab --title Backend -d "%ROOT%" cmd /k "python main.py" ^; new-tab --title Frontend -d "%ROOT%\frontend-react" cmd /k "npm run dev"
+
 echo ========================================
-echo   Both servers are starting!
+echo   All systems are starting!
 echo ========================================
 echo.
-echo Backend:  http://localhost:5000
-echo Frontend: http://localhost:5173 (check terminal for actual port)
+echo Backend:        http://localhost:5000
+echo Frontend:       http://localhost:5173
 echo.
-echo Two new windows have opened - one for each server.
-echo Close those windows to stop the servers.
+echo Both servers run as tabs in one Windows Terminal window.
 echo.
-echo Press any key to close this launcher window...
-echo (The servers will continue running in their own windows)
-pause >nul
+timeout /t 3 /nobreak >nul

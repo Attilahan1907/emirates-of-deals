@@ -1,9 +1,10 @@
-import { ArrowUpNarrowWide, ArrowDownWideNarrow, Zap, AlignJustify } from 'lucide-react'
+import { ArrowUpNarrowWide, ArrowDownWideNarrow, Zap, AlignJustify, Clock } from 'lucide-react'
 
 const OPTIONS = [
   { id: 'price_asc',   label: 'Günstigste',     icon: ArrowUpNarrowWide },
   { id: 'price_desc',  label: 'Teuerste',        icon: ArrowDownWideNarrow },
   { id: 'deal_score',  label: 'Preis-Leistung',  icon: Zap },
+  { id: 'newest',      label: 'Neueste',         icon: Clock },
   { id: 'relevance',   label: 'Relevanz',        icon: AlignJustify },
 ]
 

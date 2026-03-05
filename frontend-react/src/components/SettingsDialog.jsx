@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { X, Settings, Send } from 'lucide-react'
+import { X, Settings, Send, BellRing } from 'lucide-react'
 import { useNotificationSettings } from '../hooks/useNotificationSettings.jsx'
 
 export function SettingsDialog({ isOpen, onClose }) {
@@ -8,6 +8,7 @@ export function SettingsDialog({ isOpen, onClose }) {
   const [saved, setSaved] = useState(false)
   const [testState, setTestState] = useState('idle') // idle | loading | success | error
   const [testError, setTestError] = useState('')
+  const [pushStatus, setPushStatus] = useState('default') // default | granted | denied | prompt
 
   useEffect(() => {
     if (isOpen) {
@@ -15,8 +16,33 @@ export function SettingsDialog({ isOpen, onClose }) {
       setSaved(false)
       setTestState('idle')
       setTestError('')
+      if ('Notification' in window) {
+        setPushStatus(Notification.permission)
+      }
     }
   }, [isOpen, settings.telegramChatId])
+
+  const requestPushPermission = async () => {
+    if (!('Notification' in window)) return
+    
+    const permission = await Notification.requestPermission()
+    setPushStatus(permission)
+    
+    if (permission === 'granted') {
+      const registration = await navigator.serviceWorker.ready
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: null // In production use VAPID
+      })
+      
+      // Send to backend
+      await fetch('/push-subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(subscription)
+      })
+    }
+  }
 
   const handleTest = async () => {
     const chatId = telegram.trim()
@@ -103,6 +129,32 @@ export function SettingsDialog({ isOpen, onClose }) {
           {testState === 'error' && testError && (
             <p className="text-xs text-red-400/70 mt-1">{testError}</p>
           )}
+        </div>
+
+        <div className="mt-6 pt-6 border-t border-foreground/10">
+          <label className="block text-sm font-medium text-foreground/70 mb-3">
+            Browser-Benachrichtigungen (PWA)
+          </label>
+          <button
+            type="button"
+            onClick={requestPushPermission}
+            disabled={pushStatus === 'granted' || pushStatus === 'denied'}
+            className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border transition-all ${
+              pushStatus === 'granted'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                : pushStatus === 'denied'
+                ? 'bg-red-500/10 border-red-500/30 text-red-400'
+                : 'bg-primary/20 border-primary/40 text-primary hover:bg-primary/30'
+            }`}
+          >
+            <BellRing className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {pushStatus === 'granted' ? 'Benachrichtigungen Aktiv' : pushStatus === 'denied' ? 'Blockiert (Browser-Einstellung)' : 'Benachrichtigungen Erlauben'}
+            </span>
+          </button>
+          <p className="text-[10px] text-foreground/30 mt-2 text-center">
+            Erlaubt es uns, dir direkt im Browser Bescheid zu geben, auch wenn die Seite zu ist.
+          </p>
         </div>
 
         <div className="flex gap-3 mt-6">

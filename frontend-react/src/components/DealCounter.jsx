@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 
-const TARGET = 47382
+// Dynamischer Wert: Startwert + täglich ~480 neue Deals seit Launch
+const START_DATE = new Date('2025-01-15')
+const BASE_COUNT = 38500
+const DAILY_RATE = 480
+const daysSinceLaunch = Math.max(0, Math.floor((Date.now() - START_DATE) / (1000 * 60 * 60 * 24)))
+const TARGET = BASE_COUNT + daysSinceLaunch * DAILY_RATE
 const DURATION = 1800 // ms
 
 export function DealCounter() {

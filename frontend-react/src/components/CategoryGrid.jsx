@@ -66,18 +66,14 @@ export function CategoryGrid({ onCategorySelect }) {
             <button
               key={cat.id}
               onClick={() => handleCardClick(cat)}
-              style={isSelected ? {
-                borderColor: c.border,
-                background: `linear-gradient(135deg, ${c.glow}, transparent)`,
-              } : {}}
-              className={`
-                h-[145px] group relative flex flex-col items-start justify-end overflow-hidden
-                rounded-2xl border p-4
-                transition-all duration-150 active:scale-[0.97]
-                ${isSelected
-                  ? 'border-transparent'
-                  : 'border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)]'}
-              `}
+              style={{
+                borderColor: isSelected ? c.accent : c.border,
+                background: isSelected 
+                  ? `linear-gradient(135deg, ${c.glow}, ${c.bg})`
+                  : `linear-gradient(135deg, ${c.glow}, transparent)`,
+                boxShadow: isSelected ? `0 4px 20px ${c.glow}` : 'none',
+              }}
+              className="h-[145px] group relative flex flex-col items-start justify-end overflow-hidden rounded-2xl border p-4 transition-all duration-150 active:scale-[0.97]"
             >
               <div
                 className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl border transition-colors"

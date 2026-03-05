@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { ExternalLink, Heart, Bell } from 'lucide-react'
+import { ExternalLink, Heart, Bell, MapPin, Clock } from 'lucide-react'
 import { formatPrice } from '../utils/formatPrice'
 import { BestDealBadge } from './BestDealBadge'
 import { DealScore } from './DealScore'
 import { AlertDialog } from './AlertDialog'
+import { PriceHistoryChart } from './PriceHistoryChart'
 import { useFavorites } from '../hooks/useFavorites'
 
-export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchmark, onOpenSettings, showImages }) {
+export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchmark, onOpenSettings, showImages, onItemClick }) {
   const hasScore = dealScore && dealScore.score !== null && dealScore.score !== undefined
   const { isFavorite, addFavorite, removeFavorite, getFavorite } = useFavorites()
   const [showAlertDialog, setShowAlertDialog] = useState(false)
@@ -49,7 +50,8 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
   return (
     <>
       <div
-        className={`group relative glass rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:bg-foreground/5 hover:border-foreground/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] active:scale-[0.99] active:shadow-none ${
+        onClick={() => onItemClick?.(item)}
+        className={`group relative glass rounded-2xl p-5 flex flex-col gap-3 transition-all duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)] hover:-translate-y-0.5 hover:bg-foreground/5 hover:border-foreground/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.15)] active:scale-[0.99] active:shadow-none cursor-pointer ${
           isBest ? 'animate-pulse-glow border-emerald-glow/30' : ''
         }`}
       >
@@ -61,6 +63,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
               alt={item.title}
               className="w-full h-full object-cover"
               loading="lazy"
+              decoding="async"
               onError={(e) => { e.target.style.display = 'none' }}
             />
           </div>
@@ -92,7 +95,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
           </button>
         </div>
 
-        <div className="flex items-start justify-between gap-2 pr-20">
+        <div className="flex items-start justify-between gap-2 pr-24">
           <div className="flex items-center gap-2">
             <span
               className={`inline-flex items-center justify-center w-7 h-7 rounded-lg text-xs font-bold ${
@@ -113,6 +116,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
                 Kleinanzeigen
               </span>
             )}
+            <PriceHistoryChart url={item.url} />
           </div>
           <div className="flex items-center gap-3">
             {hasScore && (
@@ -131,6 +135,23 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
         <h3 className="text-sm font-medium text-foreground/90 line-clamp-2 leading-relaxed pr-16">
           {item.title}
         </h3>
+
+        {(item.location || item.date) && (
+          <div className="flex items-center gap-3 text-[10px] text-foreground/40">
+            {item.location && (
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3 h-3" />
+                {item.location}
+              </span>
+            )}
+            {item.date && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {item.date}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Preis-Leistungs-Anzeige — nur bei Benchmark-Kategorien (GPU/CPU/RAM/Smartphone) */}
         {isBenchmark && hasScore && dealScore?.model && (
@@ -169,6 +190,7 @@ export function ProductCard({ item, rank, isBest, allPrices, dealScore, isBenchm
             href={item.url}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className={`flex items-center gap-1.5 text-xs font-semibold rounded-xl py-2 px-3.5 transition-all duration-200 whitespace-nowrap border ${
               isBest
                 ? 'bg-[rgba(245,158,11,0.12)] hover:bg-[rgba(245,158,11,0.2)] border-[rgba(245,158,11,0.25)] text-[#f59e0b] hover:shadow-[0_4px_14px_rgba(245,158,11,0.25)] hover:-translate-y-0.5'

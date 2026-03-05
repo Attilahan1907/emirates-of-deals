@@ -11,6 +11,27 @@ export default defineConfig({
       '/alerts': 'http://127.0.0.1:5000',
       '/search-alerts': 'http://127.0.0.1:5000',
       '/test-telegram': 'http://127.0.0.1:5000',
+      '/api': 'http://127.0.0.1:5000',
+      '/price-history': 'http://127.0.0.1:5000',
     },
+  },
+  build: {
+    target: 'esnext',
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 500,
   },
 })

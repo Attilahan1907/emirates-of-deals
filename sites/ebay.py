@@ -4,12 +4,29 @@ import time
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sites.base_scraper import BaseScraper
+from sites.utils import ScraperLogger, is_relevant
 
 
 class EbayScraper(BaseScraper):
     SOURCE = "ebay"
     TOKEN_URL = "https://api.ebay.com/identity/v1/oauth2/token"
     SEARCH_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
+
+    # eBay DE Kategorie-IDs für Benchmark-Kategorien
+    EBAY_CATEGORY_MAP = {
+        "gpu": "27386",        # Grafik-/Videokarten
+        "cpu": "164",          # CPUs/Prozessoren
+        "ram": "170083",       # Arbeitsspeicher (RAM)
+        "smartphone": "9355",  # Handys & Smartphones
+    }
+
+    # Sinnvolle Mindestpreise pro Kategorie (filtert Adapter, Kabel etc.)
+    EBAY_MIN_PRICE = {
+        "gpu": 30,
+        "cpu": 15,
+        "ram": 8,
+        "smartphone": 30,
+    }
 
     def __init__(self):
         super().__init__()
@@ -53,7 +70,7 @@ class EbayScraper(BaseScraper):
 
     # ------------------------------------------------------------------ Search
     def search(self, query, location="", radius=50, start_page=1, batch_size=3,
-               category=None, category_id=None, min_price=None, max_price=None):
+               category=None, category_id=None, min_price=None, max_price=None, **kwargs):
         token = self._get_token()
         if not token:
             print("[ebay] Kein API-Token — eBay übersprungen")
@@ -63,7 +80,8 @@ class EbayScraper(BaseScraper):
 
         def fetch_page(page):
             offset = (page - 1) * 50
-            lo = int(min_price) if min_price is not None else 2
+            default_min = self.EBAY_MIN_PRICE.get(category, 2) if category else 2
+            lo = int(min_price) if min_price is not None else default_min
             hi = int(max_price) if max_price is not None else ""
             price_filter = f"price:[{lo}..{hi}]"
             filters = ["buyingOptions:{FIXED_PRICE}", price_filter, "priceCurrency:EUR"]
@@ -72,9 +90,14 @@ class EbayScraper(BaseScraper):
                 "q": query,
                 "limit": 50,
                 "offset": offset,
-                "sort": "price",
+                "sort": "bestMatch",
                 "filter": ",".join(filters),
             }
+
+            # eBay-Kategorie-ID mappen wenn Benchmark-Kategorie vorhanden
+            ebay_cat = self.EBAY_CATEGORY_MAP.get(category)
+            if ebay_cat:
+                params["category_ids"] = ebay_cat
             headers = {
                 "Authorization": f"Bearer {token}",
                 "X-EBAY-C-MARKETPLACE-ID": "EBAY_DE",
@@ -84,7 +107,7 @@ class EbayScraper(BaseScraper):
                 resp = requests.get(self.SEARCH_URL, params=params, headers=headers, timeout=10)
                 data = resp.json()
                 if resp.status_code != 200:
-                    print(f"[ebay] API Fehler {resp.status_code}: {data.get('errors', data)}")
+                    ScraperLogger.log_error(self.SOURCE, page, f"API Error {resp.status_code}: {data.get('errors', data)}")
                     return page, []
 
                 items = data.get("itemSummaries", [])
@@ -92,6 +115,9 @@ class EbayScraper(BaseScraper):
                 for item in items:
                     try:
                         title = item.get("title", "")
+                        if not is_relevant(title, query, category, False):
+                            continue
+
                         url = item.get("itemWebUrl", "")
                         price_obj = item.get("price", {})
                         price = float(price_obj.get("value", 0))
@@ -102,18 +128,24 @@ class EbayScraper(BaseScraper):
                         img_list = item.get("image", {})
                         if img_list:
                             image = img_list.get("imageUrl")
+                        loc = item.get("itemLocation", {})
+                        location = loc.get("city", "") or loc.get("country", "")
+                        date_str = item.get("itemCreationDate", "")
                         results.append(self.normalize({
                             "title": title,
                             "url": url,
                             "price": price,
                             "original": f"€{price:.2f}" if currency == "EUR" else f"{price:.2f} {currency}",
                             "image": image,
+                            "location": location,
+                            "date": date_str,
                         }))
                     except Exception:
                         continue
+                ScraperLogger.log_success(self.SOURCE, page, len(results))
                 return page, results
             except Exception as e:
-                print(f"[ebay] Seite {page} Fehler: {e}")
+                ScraperLogger.log_error(self.SOURCE, page, e)
                 return page, []
 
         # Parallel über batch_size Seiten

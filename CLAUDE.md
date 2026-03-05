@@ -1,6 +1,6 @@
 # Emirates of Deals - Projektdokumentation für Claude
 
-## Projektstatus: Stand 20.02.2026
+## Projektstatus: Stand 05.03.2026
 
 ---
 
@@ -19,11 +19,12 @@ Ein Preisvergleichs- und Preisalarm-Tool für Kleinanzeigen.de (deutsche Gebrauc
 
 | Schicht | Technologie |
 |---------|------------|
-| Backend | Python, Flask 3.0, BeautifulSoup4, concurrent.futures |
-| Frontend | React 18, Vite, Tailwind CSS, Lucide Icons |
-| Notifications | Telegram Bot API |
-| Storage | JSON (backend alerts auf /data), localStorage (frontend favorites) |
-| Deployment | fly.io (24/7, persistent Volume für JSON-Dateien) |
+| Backend | Python, Flask 3.0, Flask-Compress, BeautifulSoup4, concurrent.futures |
+| Cache | Redis (Upstash) mit in-memory Fallback |
+| Frontend | React 19, Vite (terser, code splitting), Tailwind CSS v4, Lucide Icons |
+| Notifications | Telegram Bot API, Web-Push |
+| Storage | SQLite/PostgreSQL, localStorage (frontend favorites) |
+| Deployment | fly.io (24/7, persistent Volume) |
 
 **Starten lokal:** `start-all.bat` → Backend auf http://localhost:5000, Frontend auf http://localhost:5173
 
@@ -33,67 +34,86 @@ Ein Preisvergleichs- und Preisalarm-Tool für Kleinanzeigen.de (deutsche Gebrauc
 
 ```
 main.py                          # Flask API (alle Endpunkte)
+database.py                      # SQLAlchemy-Modelle (PriceAlert, SearchAlert, PriceHistoryItem, PushSubscription, ScraperLog)
+cache.py                         # Redis mit in-memory Fallback
 price_monitor.py                 # Hintergrund-Monitoring (alle 30 Min.)
-notifications.py                 # Telegram Versand
+notifications.py                 # Telegram + Web-Push Versand
 config.py                        # .env laden + Setup-Routine
-SETUP_ALERTS.md                  # Setup-Anleitung für Notifications
 requirements.txt                 # Python-Abhängigkeiten
 start-all.bat                    # Windows-Startskript für beide Server
 fly.toml                         # fly.io Deployment-Konfiguration
 Dockerfile                       # Multi-stage Build (Node → Python)
 
 sites/
-  kleinanzeigen.py               # Aktiver Scraper (paralleles Scraping, 3 Seiten)
-  amazon.py, ebay.py, daraz.py   # PLACEHOLDER - noch nicht implementiert
+  base_scraper.py                # Abstrakte Basisklasse (Header-Rotation, Delays, Proxy-Support)
+  kleinanzeigen.py               # Aktiver Scraper (KleinanzeigenScraper, 3 Seiten parallel)
+  ebay.py                        # eBay Scraper (EbayScraper, API-First + Scraping-Fallback)
+  price_history.py               # Preishistorie-Klasse (SQLite-Backend)
+  utils.py                       # PriceParser, ScraperLogger, is_relevant()
 
 frontend-react/src/
-  App.jsx                        # Haupt-App-Komponente
+  App.jsx                        # Haupt-App (3-Modi: Landing / Ergebnisse / Watchlist)
   api/
-    search.js                    # Suche API-Client
+    search.js                    # Suche API-Client (sources-Parameter)
     alerts.js                    # Preisalarme API-Client
     searchAlerts.js              # Suchalarme API-Client
   components/
-    Header.jsx                   # Logo + Watchlist + Settings + Alerts Buttons
-    SearchBar.jsx                # Suchleiste (Deutschlandweit default, Radius nur mit PLZ)
-    FilterPanel.jsx              # Preis-Filter + Fotos-Toggle
-    ProductCard.jsx              # Produktkarte (Favorit-Herz, Alarm-Glocke, DealScore-Badge)
+    Header.jsx                   # Pill-Nav, Glassmorphism, fixed top
+    SearchBar.jsx                # Hero-Modus + Compact-Modus, Popular Searches
+    FilterPanel.jsx              # Preis-Filter + Fotos-Toggle + eBay-Checkbox
+    ProductCard.jsx              # Produktkarte (Favorit-Herz, Alarm-Glocke, DealScore, eBay-Badge)
     ResultsGrid.jsx              # Ergebnisgrid (alle Ergebnisse auf einmal)
     DealScore.jsx                # Quadratisches Score-Badge (grün/orange/rot)
+    ProductDetailModal.jsx       # Detail-Modal (2-Spalten Desktop, Slide-in Mobile, ESC-Support)
+    PriceHistoryChart.jsx        # Preisverlauf-Chart (SVG-basiert, Sparkline)
+    Sparkline.jsx                # Mini-Sparkline-Komponente
+    SortBar.jsx                  # Sortierung (Preis ↑↓, Deal-Score, Relevanz)
+    PriceTicker.jsx              # Laufband mit echten Preisen auf Landing-Page
+    DealCounter.jsx              # Animierter Deal-Zähler auf Landing-Page
+    IOSInstallPrompt.jsx         # PWA-Install-Prompt für iOS
     Watchlist.jsx                # Merkliste-Ansicht
     AlertDialog.jsx              # Preisalarm-Dialog (Telegram, auto Chat-ID)
     AlertsListDialog.jsx         # Alle Alarme anzeigen/löschen (2 Tabs)
     SearchAlertDialog.jsx        # Suchalarm erstellen
-    SettingsDialog.jsx           # Telegram Chat-ID + Test-Button
-    StatsBar.jsx, EmptyState.jsx, LoadingState.jsx, CategoryGrid.jsx, BestDealBadge.jsx
+    SettingsDialog.jsx           # Telegram Chat-ID + Test-Button + Scraper-Health-Dashboard
+    EmptyState.jsx, LoadingState.jsx, CategoryGrid.jsx, BestDealBadge.jsx
   hooks/
-    useSearch.js                 # Such-State-Management (vereinfacht, kein Paging)
+    useSearch.js                 # Such-State-Management (sources, loadMore, hasMore)
     useFavorites.js              # Favoriten (localStorage + Backend-Sync)
     useNotificationSettings.jsx  # Telegram Chat-ID (React Context + localStorage)
   utils/
-    computeDealScore.js          # Deal-Score-Algorithmus
-    computeStats.js, formatPrice.js, extractModel.js
+    computeDealScore.js          # Deal-Score-Algorithmus (Benchmark + relativer Score)
+    formatPrice.js, extractModel.js
   data/
     gpuBenchmarks.js, cpuBenchmarks.js, smartphoneBenchmarks.js, ramBenchmarks.js
+    categoryFilters.js           # Kategorie-spezifische Filter-Dropdowns
 ```
 
 ---
 
 ## Implementierte Features (vollständig)
 
-1. ✅ **Suche** — Kleinanzeigen.de scrapen, 3 Seiten parallel, alle Ergebnisse auf einmal
+1. ✅ **Suche** — Kleinanzeigen.de + eBay scrapen, 3 Seiten parallel, alle Ergebnisse auf einmal
 2. ✅ **Filter** — Preis (Min/Max), Umkreis (nur aktiv wenn PLZ eingegeben), Fotos ein/aus
 3. ✅ **Standardeinstellung** — "Deutschlandweit" beim Laden (kein PLZ nötig)
-4. ✅ **Kategorien** — GPU/CPU/RAM/Smartphone mit Benchmark-Score
-5. ✅ **Deal-Score** — Quadratisches Badge (grün ≥70, orange ≥40, rot <40)
+4. ✅ **Kategorien** — GPU/CPU/RAM/Smartphone mit Benchmark-Score + Sub-Filter
+5. ✅ **Deal-Score** — Quadratisches Badge (grün ≥70, orange ≥40, rot <40) + relativer Score für alle Suchen
 6. ✅ **Favoriten** — Herz-Button, in localStorage gespeichert
-7. ✅ **Preisalarme** — Glocke-Button, Alert-Preis setzen, Telegram-Benachrichtigung
+7. ✅ **Preisalarme** — Glocke-Button, Alert-Preis setzen, Telegram-Benachrichtigung (DB-persistiert)
 8. ✅ **Suchalarm** — Neue Angebote unter Preisschwelle → Telegram
 9. ✅ **Telegram-Einstellungen** — Chat-ID einmalig speichern + Test-Button
 10. ✅ **Alerts-Liste** — Übersicht aller Alarme, löschen, manuell prüfen
 11. ✅ **Watchlist** — Alle Favoriten mit Alert-Status
 12. ✅ **Produktbilder** — Optional einblendbar (Checkbox)
-13. ✅ **Statistiken** — Best Price, Avg, Ersparnis
-14. ✅ **fly.io Deployment** — 24/7, persistent Volume, Telegram funktioniert
+13. ✅ **fly.io Deployment** — 24/7, persistent Volume, Telegram funktioniert
+14. ✅ **eBay-Integration** — EbayScraper (API-First + Scraping-Fallback), eBay-Badge auf Produktkarte
+15. ✅ **Sortierung** — Preis ↑↓, Deal-Score, Relevanz (SortBar, client-seitig)
+16. ✅ **Preishistorie** — SQLite-Persistenz, `/price-history` API, PriceHistoryChart im Modal
+17. ✅ **Produkt-Detail-Modal** — 2-Spalten Desktop, Slide-in Mobile, ESC/Klick-außen, Stats, Chart
+18. ✅ **Scraper-Health** — ScraperLog in DB, `/api/health` API, Status-Dashboard in Einstellungen
+19. ✅ **PostgreSQL-Support** — automatische URL-Erkennung, Migrations-Skript
+20. ✅ **Web-Push / PWA** — Push-Subscriptions in DB, iOS-Install-Prompt
+21. ✅ **Proxy-Rotation** — BaseScraper unterstützt PROXY_LIST Umgebungsvariable
 
 ---
 
@@ -117,7 +137,10 @@ Suchalarm:
 
 | Method | Endpoint | Beschreibung |
 |--------|----------|--------------|
-| POST | /search | Produkte suchen (alle Ergebnisse, kein Paging) |
+| POST | /search | Produkte suchen (sources-Parameter, parallel) |
+| GET | /price-history | Preishistorie für eine URL abrufen |
+| GET | /api/health | Scraper-Gesundheitsstatus (letzte 24h) |
+| POST | /push-subscribe | Browser-Push-Subscription speichern |
 | GET | /alerts | Alle Preisalarme abrufen |
 | POST | /alerts | Neuen Preisalarm erstellen |
 | DELETE | /alerts/\<id\> | Preisalarm löschen |
@@ -146,7 +169,7 @@ flyctl logs
 # Gemountet unter /data auf dem Server
 ```
 
-**Wichtig:** `price_alerts.json` und `search_alerts.json` liegen auf dem fly.io Volume unter `/data` — bleiben bei Re-Deploys erhalten.
+**Wichtig:** Alerts und Preishistorie sind jetzt in SQLite/PostgreSQL gespeichert (`emirates_deals.db`). Bei fly.io muss das Volume für die DB-Datei eingerichtet sein.
 
 ---
 
@@ -194,24 +217,16 @@ Kein Scraper macht Requests ohne diese Sicherheitsschicht.
 ## Offene TODOs (Priorität)
 
 **Nice to have:**
-- [ ] Preishistorie speichern (SQLite oder JSON-Append)
-- [ ] Sortierung der Ergebnisse (Preis ↑↓, Deal-Score, neueste zuerst)
-- [ ] Zustand-Filter ("Neu"/"Gebraucht")
+- [ ] Zustand-Filter ("Neu"/"Gebraucht") — noch nicht implementiert
 - [ ] Watchlist-Export als JSON/CSV
 - [ ] Weitere Plattformen (willhaben.at)
+- [ ] Location + Datum scrapen: `sites/kleinanzeigen.py` → location/date aus HTML; `sites/ebay.py` → itemLocation aus API-Response
 
-**Geplant: Produkt-Detailseite (3 Phasen)**
-- [ ] **Phase 1** — ProductDetailModal (nur Frontend, kein Backend nötig)
-  - Mobile: Fullscreen CSS Modal, Slide-in von unten
-  - Desktop: 2-Spalten-Modal (Bild links, Infos rechts), ESC/Klick-außen zum Schließen
-  - Inhalt: Hero-Bild, Titel, Preis, DealScore, "-X% unter Durchschnitt" Badge, Min/Avg/Max Stats, CTA-Button
-  - Design: bestehendes Dark-Theme (glass, neon-cyan, Tailwind-Klassen)
-  - Dateien: neu `ProductDetailModal.jsx`, ändern `ProductCard.jsx`, `ResultsGrid.jsx`
-- [ ] **Phase 2** — Location + Datum scrapen (Backend)
-  - `sites/kleinanzeigen.py` → location + date aus HTML
-  - `sites/ebay.py` → itemLocation aus Browse API Response
-- [ ] **Phase 3** — Preisverlauf Chart (großer Aufwand, eigener Sprint)
-  - SQLite Preishistorie + recharts Library + neuer API-Endpunkt
+**Bereits erledigt (nicht mehr TODO):**
+- ✅ Preishistorie — in DB + API + PriceHistoryChart
+- ✅ Sortierung — SortBar (Preis ↑↓, Deal-Score, Relevanz)
+- ✅ ProductDetailModal — vollständig implementiert
+- ✅ Preisverlauf-Chart — SVG-basiert in ProductDetailModal
 
 ---
 
@@ -245,26 +260,32 @@ Kein Scraper macht Requests ohne diese Sicherheitsschicht.
 
 ---
 
-## Regel: Bei jedem Git-Push → PROGRESS.md aktualisieren
+## Workflow
 
-**PFLICHT:** Jedes Mal wenn Code auf Git gepusht wird, muss `PROGRESS.md` im Projektwurzelverzeichnis aktualisiert werden.
+**Nach jeder Aufgabe muss die `PROGRESS.md` aktualisiert werden.**
 
-Format:
+**Bevor eine Session beendet wird, muss eine Zusammenfassung des Ist-Zustands in die `PROGRESS.md` geschrieben werden, damit der Kontext für die nächste Session erhalten bleibt.**
+
+Format für jeden Eintrag:
 ```
 ## [Datum] - [Kurzbeschreibung]
 ### Was gemacht wurde:
+- ...
+### Probleme/Besonderheiten:
+- ...
+### Nächster Schritt:
 - ...
 ### Dateien geändert:
 - ...
 ```
 
-`PROGRESS.md` ist das Protokoll aller Änderungen über alle Sessions hinweg.
+`PROGRESS.md` ist das lückenlose Protokoll aller Änderungen und das primäre Übergabedokument zwischen Sessions.
 
 ---
 
 ## Vorsichtshinweise
 
-- `price_alerts.json` und `search_alerts.json` enthalten Telegram-IDs → in .gitignore
+- `emirates_deals.db` enthält Telegram-IDs und Alerts → in .gitignore
 - `.env` enthält Bot-Token → in .gitignore
 - `build/`, `dist/`, `*.spec` → in .gitignore
 - Scraper ohne Rate-Limiting — bei persönlichem Gebrauch kein Problem

@@ -1,7 +1,11 @@
 flask==3.0.0
 flask-cors==4.0.0
+flask-compress==1.14
 beautifulsoup4==4.12.2
 requests==2.31.0
-selenium==4.15.2
 lxml==4.9.3
 python-dotenv==1.0.0
+sqlalchemy==2.0.23
+psycopg2-binary==2.9.9
+pywebpush==1.14.0
+redis==5.0.1

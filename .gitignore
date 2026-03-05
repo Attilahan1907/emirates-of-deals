@@ -18,3 +18,4 @@ frontend-react/node_modules/
 frontend-react/dist/
 node_modules/
 .fly/
+.aider*

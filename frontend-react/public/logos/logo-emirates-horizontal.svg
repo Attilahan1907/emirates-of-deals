@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 130" width="500" height="130">
+  <defs>
+    <linearGradient id="bg-grad-glass-h" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E5FF;stop-opacity:0.1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:0.2" />
+    </linearGradient>
+    <linearGradient id="primary-gradient-h" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00E5FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(5, 5) scale(0.24)">
+    <path d="M200,20 L360,120 L360,450 Q360,500 310,500 L90,500 Q40,500 40,450 L40,120 Z" 
+          fill="url(#bg-grad-glass-h)" 
+          stroke="currentColor" 
+          stroke-width="1.5" 
+          stroke-opacity="0.15" />
+    
+    <g transform="translate(200, 310)">
+      <path d="M-20,0 L-20,-210 L0,-240 L20,-210 L20,0 Z" fill="url(#primary-gradient-h)" />
+      <path d="M-50,0 L-50,-150 L-35,-165 L-20,-150 L-20,0 Z" fill="url(#primary-gradient-h)" opacity="0.9" />
+      <path d="M20,0 L20,-150 L35,-165 L50,-150 L50,0 Z" fill="url(#primary-gradient-h)" opacity="0.9" />
+      
+      <g transform="translate(0, -250)">
+        <circle cx="0" cy="0" r="18" fill="url(#primary-gradient-h)" />
+        <rect x="-2" y="-45" width="4" height="25" fill="url(#primary-gradient-h)" />
+      </g>
+    </g>
+  </g>
+
+  <g transform="translate(130, 62)" font-family="'Inter', sans-serif" font-weight="900">
+    <text x="0" y="0" font-size="36" letter-spacing="2" style="text-transform: uppercase;" fill="url(#primary-gradient-h)">Emirates</text>
+    <text x="185" y="0" font-size="18" font-weight="800" opacity="0.6" fill="currentColor">OF</text>
+    <text x="0" y="52" font-size="62" letter-spacing="1" style="text-transform: uppercase;" fill="url(#primary-gradient-h)">Deals</text>
+  </g>
+</svg>

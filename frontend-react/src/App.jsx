@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import { Header } from './components/Header'
 import { SearchBar } from './components/SearchBar'
-import { StatsBar } from './components/StatsBar'
 import { SortBar } from './components/SortBar'
 import { ResultsGrid } from './components/ResultsGrid'
 import { EmptyState } from './components/EmptyState'
@@ -30,7 +29,27 @@ export default function App() {
   const [maxPrice, setMaxPrice] = useState('')
   const [showImages, setShowImages] = useState(false)
   const [includeEbay, setIncludeEbay] = useState(true)
+  const [ebayAvailable, setEbayAvailable] = useState(null) // null = loading, true/false = known
+  const [categoryFilters, setCategoryFilters] = useState({})
   const [sortBy, setSortBy] = useState('price_asc')
+  const [condition, setCondition] = useState('')
+
+  // Datum-String → Timestamp (für "Neueste"-Sortierung)
+  const parseDateToTs = (dateStr) => {
+    if (!dateStr) return 0
+    const s = dateStr.trim()
+    // eBay ISO: "2026-03-05T14:30:00.000Z"
+    if (s.includes('T') || s.match(/^\d{4}-\d{2}-\d{2}/)) return new Date(s).getTime() || 0
+    const now = new Date()
+    if (s.toLowerCase().startsWith('heute')) return now.getTime()
+    if (s.toLowerCase().startsWith('gestern')) { now.setDate(now.getDate() - 1); return now.getTime() }
+    const vorMatch = s.match(/vor\s+(\d+)\s+Tag/)
+    if (vorMatch) { now.setDate(now.getDate() - parseInt(vorMatch[1])); return now.getTime() }
+    // "02.03.2026"
+    const dmyMatch = s.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/)
+    if (dmyMatch) return new Date(`${dmyMatch[3]}-${dmyMatch[2].padStart(2,'0')}-${dmyMatch[1].padStart(2,'0')}`).getTime() || 0
+    return 0
+  }
 
   // Sortierung clientseitig (nach Eingang der Ergebnisse)
   const sortedResults = useMemo(() => {
@@ -43,22 +62,30 @@ export default function App() {
         .sort((a, b) => b.score - a.score)
         .map(({ r }) => r)
     }
+    if (sortBy === 'newest') return [...results].sort((a, b) => parseDateToTs(b.date) - parseDateToTs(a.date))
     return results // relevance: original scraper order
   }, [results, sortBy, activeCategory])
 
-  // Bei Preisfilter-Änderung → neue Backend-Suche (700ms Debounce)
-  const priceDebounceRef = useRef(null)
-  const lastSearchParamsRef = useRef(null)
+  // /api/config einmalig laden (eBay-Verfügbarkeit)
   useEffect(() => {
+    fetch('/api/config')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setEbayAvailable(data.ebay_available) })
+      .catch(() => {})
+  }, [])
+
+  // Preisfilter: KEIN Auto-Search mehr — wird erst bei "Finden"-Klick angewendet
+  const lastSearchParamsRef = useRef(null)
+
+  // Kategorie-Filter (Dropdowns): sofort suchen bei Änderung (bewusste Auswahl, kein Tippen)
+  const catFilterFirstRender = useRef(true)
+  useEffect(() => {
+    if (catFilterFirstRender.current) { catFilterFirstRender.current = false; return }
     if (!hasSearched || loading) return
-    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current)
-    priceDebounceRef.current = setTimeout(() => {
-      const p = lastSearchParamsRef.current
-      if (!p) return
-      search(p.query, p.location, p.radius, p.category, p.categoryId, p.sources, minPrice || null, maxPrice || null)
-    }, 700)
-    return () => clearTimeout(priceDebounceRef.current)
-  }, [minPrice, maxPrice])
+    const p = lastSearchParamsRef.current
+    if (!p) return
+    search(p.query, p.location, p.radius, p.category, p.categoryId, p.sources, minPrice || null, maxPrice || null, categoryFilters, condition)
+  }, [categoryFilters])
 
   // Bei eBay-Toggle → sofort neu suchen
   const isFirstRender = useRef(true)
@@ -70,17 +97,18 @@ export default function App() {
     const sources = ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])]
     const updatedParams = { ...p, sources }
     lastSearchParamsRef.current = updatedParams
-    search(updatedParams.query, updatedParams.location, updatedParams.radius, updatedParams.category, updatedParams.categoryId, sources, minPrice || null, maxPrice || null)
+    search(updatedParams.query, updatedParams.location, updatedParams.radius, updatedParams.category, updatedParams.categoryId, sources, minPrice || null, maxPrice || null, categoryFilters, condition)
   }, [includeEbay])
 
   const handleCategorySelect = (subcategory) => {
     setActiveCategory(subcategory)
+    setCategoryFilters({})
     setSortBy('price_asc')
     const query = subcategory.defaultQuery || ''
     setLastQuery(query)
     const params = { query, location: '', radius: 50, category: subcategory.benchmarkType || null, categoryId: subcategory.categoryId || null, sources: ['kleinanzeigen', ...(includeEbay ? ['ebay'] : [])] }
     lastSearchParamsRef.current = params
-    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null)
+    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null, {}, condition)
   }
 
   const handleSearch = (query, location, radius, sources = ['kleinanzeigen']) => {
@@ -89,11 +117,12 @@ export default function App() {
     setSortBy('price_asc')
     const params = { query: effectiveQuery, location, radius, category: activeCategory?.benchmarkType || null, categoryId: activeCategory?.categoryId || null, sources }
     lastSearchParamsRef.current = params
-    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null)
+    search(params.query, params.location, params.radius, params.category, params.categoryId, params.sources, minPrice || null, maxPrice || null, categoryFilters, condition)
   }
 
   const handleReset = () => {
     setActiveCategory(null)
+    setCategoryFilters({})
     setMinPrice('')
     setMaxPrice('')
     reset()
@@ -187,6 +216,9 @@ export default function App() {
                 onSearchAlert={() => setShowSearchAlert(true)}
                 showImages={showImages} onShowImagesChange={setShowImages}
                 includeEbay={includeEbay} onIncludeEbayChange={setIncludeEbay}
+                ebayAvailable={ebayAvailable}
+                categoryId={activeCategory?.categoryId} categoryFilters={categoryFilters} onCategoryFiltersChange={setCategoryFilters}
+                condition={condition} onConditionChange={setCondition}
               />
             </div>
           </section>
@@ -203,7 +235,8 @@ export default function App() {
           <footer className="border-t border-[rgba(255,255,255,0.06)] py-8">
             <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
               <div className="flex items-center gap-2">
-                <img src="/logos/logo-crown.svg" alt="Emirates of Deals" className="h-8 w-auto opacity-75" />
+                <img src="/logos/logo-emirates-horizontal.svg" alt="Emirates of Deals" className="h-10 w-auto opacity-75 dark-logo" />
+                <img src="/logos/logo-emirates-horizontal-light.svg" alt="Emirates of Deals" className="h-10 w-auto opacity-75 light-logo hidden" />
               </div>
               <p className="text-xs text-muted-foreground">
                 Mit Präzision gebaut. Fürs Sparen designt.
@@ -242,7 +275,10 @@ export default function App() {
           onSearchAlert={() => setShowSearchAlert(true)}
           showImages={showImages} onShowImagesChange={setShowImages}
           includeEbay={includeEbay} onIncludeEbayChange={setIncludeEbay}
+          ebayAvailable={ebayAvailable}
+          categoryId={activeCategory?.categoryId} categoryFilters={categoryFilters} onCategoryFiltersChange={setCategoryFilters}
           currentQuery={lastQuery}
+          condition={condition} onConditionChange={setCondition}
         />
 
         {error && (
@@ -255,7 +291,6 @@ export default function App() {
 
         {!loading && hasSearched && results.length > 0 && (
           <>
-            <StatsBar results={results} />
             <SortBar sortBy={sortBy} onChange={setSortBy} />
             <ResultsGrid
               results={sortedResults}

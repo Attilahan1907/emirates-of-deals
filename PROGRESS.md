@@ -1,4 +1,121 @@
-# Emirates of Deals - Fortschrittsprotokoll
+## [05.03.2026] - Autos-Filter: Marke (Logo-Grid), Baujahr ab, KM-Stand bis
+
+### Was gemacht wurde:
+- **`categoryFilters.js`:** 3 neue Filter für Autos-Kategorie (ID 216) ergänzt:
+  - `autos.marke_s` (type: `brand_grid`) — 18 Marken mit Wikipedia-SVG-Logos
+  - `autos.baujahr_i` (type: `range_from`) — 7 Optionen "Ab Jahr", values als `"2020:"` (Range-Format für Kleinanzeigen-URL)
+  - `autos.kilometer_i` (type: `range_to`) — 6 Optionen "Bis X km", values als `":50000"`
+- **`FilterPanel.jsx`:** Neuer Rendering-Zweig für `brand_grid`:
+  - Logo-Grid (6 Spalten mobile, 9 Spalten desktop) mit Toggle-Verhalten
+  - Gewählte Marke: neon-cyan Border + Hintergrund
+  - Logo lädt nicht → wird per `onError` ausgeblendet
+  - Dropdown- und Range-Filter in gemeinsamer Zeile
+- **Backend:** Keine Änderung nötig — `+key:value` Format im existing `k_suffix`-Loop reicht
+
+### Nächster Schritt:
+- Verifikation: Autos-Kategorie wählen, 8 Filter prüfen, Marke + Baujahr + KM kombinieren
+
+### Dateien geändert:
+- `frontend-react/src/data/categoryFilters.js`
+- `frontend-react/src/components/FilterPanel.jsx`
+
+---
+
+## [05.03.2026] - Prio 3: SW Offline-Caching, Location/Datum scrapen, Backend-Sortierung
+
+### Was gemacht wurde:
+- **Service Worker Offline-Caching (Task A):** `sw.js` um `install`, `activate` und `fetch` Events erweitert. App-Shell wird gecacht, API-Calls gehen immer ans Netz, alle anderen Assets nutzen Stale-While-Revalidate. Alte Cache-Versionen werden beim Aktivieren gelöscht.
+- **Kleinanzeigen Datum (Task B1):** `_parse_page()` extrahiert jetzt Datum aus `.aditem-main--top--right` als roher String (`"Heute, 14:30"`, `"02.03.2026"` etc.) → Feld `"date"` im Ergebnis.
+- **eBay Location + Datum (Task B2):** `ebay.py` extrahiert `itemLocation.city/country` → `"location"` und `itemCreationDate` → `"date"` aus der eBay Browse API Response.
+- **ProductCard location/date (Task B3):** `ProductCard.jsx` zeigt `MapPin`+Ort und `Clock`+Datum als kleine Zeile unter dem Titel an (nur wenn Wert vorhanden).
+- **Backend-Sortierung (Task C):** `/search` Endpunkt unterstützt optionalen `sort_by` Parameter (`"price_asc"`, `"price_desc"`). Cache-Key enthält `sort_by`. Deal-Score-Sortierung bleibt weiterhin nur im Frontend.
+
+### Dateien geändert:
+- `frontend-react/public/sw.js` (install + fetch + activate Events)
+- `sites/kleinanzeigen.py` (`_parse_page()` +date)
+- `sites/ebay.py` (`fetch_page()` +location, +date)
+- `frontend-react/src/components/ProductCard.jsx` (+MapPin/Clock Icons, +location/date Anzeige)
+- `main.py` (`/search` +sort_by Parameter + Cache-Key)
+
+### Nächster Schritt:
+- `flyctl deploy` für Production-Deploy
+- SW in DevTools testen (Application → Service Workers)
+
+## [05.03.2026] - Release-Vorbereitung: 7 Features implementiert
+
+### Was gemacht wurde:
+- **Dockerfile-Fix:** `COPY --from=frontend-builder /app/frontend-react/dist` → `/app/dist` (Build-Fehler behoben)
+- **PriceHistoryChart:** Echter SVG-Liniengraph implementiert (SparklineSVG-Komponente, ~50 Zeilen, keine externe Bibliothek). Zeigt jetzt echten Preisverlauf im Tooltip mit Farbkodierung (grün=sinkend, rot=steigend).
+- **DealCounter:** Hardcoded 47.382 durch dynamische Berechnung ersetzt. Startwert 38.500 + 480 Deals/Tag seit Launch-Datum (15.01.2025). Wächst täglich automatisch.
+- **PriceTicker:** Fetcht jetzt `/api/trending` beim Mount und zeigt echte gesehene Produkte. Fallback auf statische Demo-Daten wenn Endpoint leer.
+- **`/api/trending` Endpunkt:** In `main.py` implementiert. In-memory Deque (maxlen=60) sammelt Items aus Suchergebnissen. Dedupliziert nach Titel.
+- **`/api/config` Endpunkt:** Gibt `{"ebay_available": bool}` zurück basierend auf `EBAY_APP_ID` Env-Var.
+- **Zustand-Filter ("Neu"/"Gebraucht"):** Dropdown in FilterPanel → `condition` Parameter durch gesamten Stack (FilterPanel → SearchBar → App → useSearch → search.js → main.py → kleinanzeigen.py → `+zustand:neu/gebraucht` in URL).
+- **eBay Fallback-UX:** eBay-Toggle wird greyed out + zeigt "(kein API-Key)" wenn `EBAY_APP_ID` nicht gesetzt. App fetcht `/api/config` einmalig beim Mount.
+- **Watchlist-Export:** JSON und CSV Export-Buttons in Watchlist-Header. Client-seitig, kein Backend nötig.
+
+### Dateien geändert:
+- `Dockerfile`
+- `main.py` (+trending, +config, +condition, +_recent_items Deque)
+- `sites/kleinanzeigen.py` (+condition Parameter → k_suffix)
+- `frontend-react/src/components/PriceHistoryChart.jsx` (komplett neu: SVG-Graph)
+- `frontend-react/src/components/DealCounter.jsx` (dynamischer Startwert)
+- `frontend-react/src/components/PriceTicker.jsx` (fetch trending + fallback)
+- `frontend-react/src/components/FilterPanel.jsx` (+Zustand-Dropdown, +eBay-greyed-out, +ebayAvailable prop)
+- `frontend-react/src/components/SearchBar.jsx` (+ebayAvailable, +condition props)
+- `frontend-react/src/components/Watchlist.jsx` (+Export JSON/CSV)
+- `frontend-react/src/hooks/useSearch.js` (+condition Parameter)
+- `frontend-react/src/api/search.js` (+condition in body)
+- `frontend-react/src/App.jsx` (+condition State, +ebayAvailable State, +/api/config fetch, +alle search() Aufrufe aktualisiert)
+
+### Nächster Schritt:
+- `flyctl deploy` um Production-Deploy zu testen
+- Verifikationscheckliste aus Release-Plan abarbeiten
+
+---
+
+## [05.03.2026] - Dokumentation aktualisiert (CLAUDE.md + PROGRESS.md)
+### Was gemacht wurde:
+- CLAUDE.md auf echten Stand gebracht (war veraltet seit 24.02.2026)
+- Fehlende Komponenten nachgetragen: ProductDetailModal, PriceHistoryChart, SortBar, PriceTicker, DealCounter, IOSInstallPrompt, Sparkline
+- Fehlende Backend-Dateien nachgetragen: database.py, cache.py, sites/price_history.py, sites/utils.py
+- Falsche Angabe korrigiert: ebay.py war als "PLACEHOLDER" markiert, ist aber vollständig implementiert
+- Feature-Liste auf 21 vollständige Features aktualisiert
+- API-Endpunkte um /price-history, /api/health, /push-subscribe ergänzt
+- TODO-Liste bereinigt (Sortierung, ProductDetailModal, PriceHistoryChart als erledigt markiert)
+- React 18 → React 19, Tailwind CSS → Tailwind CSS v4 korrigiert
+### Dateien geändert:
+- `CLAUDE.md`
+- `PROGRESS.md`
+
+---
+
+## [22.02.2026] - Sprint: Scalability & Reliability (Abschluss Prio 3)
+### Was gemacht wurde:
+- **PostgreSQL Support:** `database.py` erkennt jetzt automatisch Postgres-URLs und passt Prefixe (`postgres://` -> `postgresql://`) an.
+- **Migrations-Tool:** `migrate_to_postgres.py` erstellt, um bestehende SQLite-Daten verlustfrei in Postgres zu überführen.
+- **Proxy Management:** `BaseScraper` unterstützt jetzt Proxy-Rotation via `PROXY_LIST` Umgebungsvariable.
+- **Robust Scraper:** `fetch_url` im BaseScraper zentralisiert HTTP-Requests mit Retries, User-Agent-Rotation und Proxy-Support.
+- **Notification Upgrade:** Web-Push (PWA) Versand im Backend implementiert (`notifications.py`) und in Monitoring integriert.
+- **Auto-History:** Jede Suche zeichnet jetzt automatisch die Preise in der Historie auf.
+### Dateien geändert:
+- `database.py`, `main.py`, `notifications.py`, `price_monitor.py`
+- `sites/base_scraper.py`, `sites/kleinanzeigen.py`
+- `migrate_to_postgres.py` (neu), `requirements.txt` (aktualisiert)
+
+---
+
+## [22.02.2026] - Sprint: Scraper Health Monitoring (Abschluss Prio 1)
+### Was gemacht wurde:
+- **Datenbank-Logging:** Neue Tabelle `ScraperLog` in `database.py` speichert Erfolg, Fehler und 429-Rate-Limits dauerhaft.
+- **ScraperLogger-Upgrade:** `sites/utils.py` Logger schreibt jetzt direkt in die DB statt nur in die Konsole.
+- **Health API:** Neuer Endpunkt `/api/health` berechnet die Erfolgsrate (Success Rate) der letzten 24 Stunden pro Provider.
+- **Frontend Status-Dashboard:** Im Einstellungen-Dialog werden jetzt Echtzeit-Statuskarten für eBay und Kleinanzeigen angezeigt (Erfolgsquote + farbiger Indikator).
+### Dateien geändert:
+- `database.py` (ScraperLog Modell)
+- `sites/utils.py` (Logger Upgrade)
+- `main.py` (/api/health Endpunkt)
+- `frontend-react/src/components/SettingsDialog.jsx` (Health UI)
 
 ---
 

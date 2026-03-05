@@ -3,69 +3,41 @@ load_config()  # .env laden oder Setup-Routine starten – muss als erstes passi
 
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_compress import Compress
 from sites.kleinanzeigen import KleinanzeigenScraper
 from sites.ebay import EbayScraper
+from sites.price_history import PriceHistory
+from database import init_db, SessionLocal, PushSubscription
+
+# DB Initialisieren
+init_db()
 
 PROVIDERS = {
     "kleinanzeigen": KleinanzeigenScraper(),
     "ebay": EbayScraper(),
 }
+price_history = PriceHistory()
 import threading
 import time
 import os
 import json
+from collections import deque
+
+# In-memory ring buffer for recently seen items (max 60)
+_recent_items = deque(maxlen=60)
+_recent_items_lock = threading.Lock()
 
 STATIC_FOLDER = os.path.join(os.path.dirname(__file__), 'frontend-react', 'dist')
 app = Flask(__name__, static_folder=STATIC_FOLDER, static_url_path='')
 CORS(app)
+Compress(app)
 
-# ── Persistenter Cache (Fly.io /data Volume oder lokales Verzeichnis) ──────────
-CACHE_TTL = 300  # 5 Minuten
-_DATA_DIR = '/data' if os.path.isdir('/data') else os.path.dirname(__file__)
-_CACHE_FILE = os.path.join(_DATA_DIR, 'search_cache.json')
-_cache: dict = {}
-_cache_lock = threading.Lock()
+# ── Cache (Redis with in-memory fallback) ──────────
+from cache import cache
 
-def _load_cache_from_disk():
-    """Beim Start: gültigen Cache vom Disk laden."""
-    global _cache
-    try:
-        if os.path.exists(_CACHE_FILE):
-            with open(_CACHE_FILE, 'r', encoding='utf-8') as f:
-                raw = json.load(f)
-            now = time.time()
-            _cache = {k: (v['data'], v['ts']) for k, v in raw.items()
-                      if now - v['ts'] < CACHE_TTL}
-            print(f"[cache] {len(_cache)} Einträge vom Disk geladen ({_CACHE_FILE})")
-    except Exception as e:
-        print(f"[cache] Disk-Load fehlgeschlagen: {e}")
-        _cache = {}
-
-def _save_cache_to_disk():
-    """Cache auf Disk schreiben (läuft im Hintergrund-Thread)."""
-    try:
-        with _cache_lock:
-            serializable = {k: {'data': v[0], 'ts': v[1]} for k, v in _cache.items()}
-        with open(_CACHE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(serializable, f)
-    except Exception as e:
-        print(f"[cache] Disk-Save fehlgeschlagen: {e}")
-
-def _cache_get(key):
-    with _cache_lock:
-        if key in _cache:
-            data, ts = _cache[key]
-            if time.time() - ts < CACHE_TTL:
-                return data
-            del _cache[key]
-    return None
-
-def _cache_set(key, data):
-    with _cache_lock:
-        _cache[key] = (data, time.time())
-    threading.Thread(target=_save_cache_to_disk, daemon=True).start()
-
-_load_cache_from_disk()
+# Keep backward compatibility with old function names
+_cache_get = cache.get
+_cache_set = cache.set
 
 # Try to import price monitor, but don't fail if it's not available
 try:
@@ -84,12 +56,45 @@ except Exception as e:
     search_monitor = None
     MONITOR_AVAILABLE = False
 
+@app.route("/push-subscribe", methods=["POST"])
+def push_subscribe():
+    subscription = request.json
+    if not subscription:
+        return jsonify({"success": False, "error": "No subscription data"}), 400
+    
+    # Extract endpoint for comparison (unique identifier for push subscriptions)
+    endpoint = subscription.get("endpoint")
+    if not endpoint:
+        return jsonify({"success": False, "error": "No endpoint in subscription"}), 400
+    
+    db = SessionLocal()
+    try:
+        # Check if subscription with this endpoint already exists
+        existing = db.query(PushSubscription).filter(
+            PushSubscription.subscription_data["endpoint"].astext == endpoint
+        ).first()
+        
+        if not existing:
+            new_sub = PushSubscription(subscription_data=subscription)
+            db.add(new_sub)
+            db.commit()
+        
+        return jsonify({"success": True}), 201
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        db.close()
+
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def serve_react(path):
     """React-Frontend ausliefern (nur für nicht-API-Routen)"""
     if path and os.path.exists(os.path.join(STATIC_FOLDER, path)):
-        return send_from_directory(STATIC_FOLDER, path)
+        response = send_from_directory(STATIC_FOLDER, path)
+        # Cache static assets for 1 year (Vite builds have content hashes)
+        if '.' in path and not path.startswith('index'):
+            response.headers['Cache-Control'] = 'public, max-age=31536000, immutable'
+        return response
     return send_from_directory(STATIC_FOLDER, 'index.html')
 
 @app.route("/search", methods=["POST"])
@@ -105,13 +110,19 @@ def search():
     batch_size = data.get("batch_size", 3)
     min_price = data.get("min_price", None)
     max_price = data.get("max_price", None)
+    category_filters = data.get("category_filters", None)
+    condition = data.get("condition", "")
 
     if not query and not category_id:
         return jsonify({"results": [], "has_more": False})
 
     sources = data.get("sources", ["kleinanzeigen"])
+    sort_by = data.get("sort_by", None)
 
-    cache_key = f"{query}|{location}|{radius}|{category}|{category_id}|{start_page}|{batch_size}|{min_price}|{max_price}|{'_'.join(sorted(sources))}"
+    cf_key = ""
+    if category_filters:
+        cf_key = "|" + "&".join(f"{k}={v}" for k, v in sorted(category_filters.items()) if v)
+    cache_key = f"{query}|{location}|{radius}|{category}|{category_id}|{start_page}|{batch_size}|{min_price}|{max_price}|{'_'.join(sorted(sources))}{cf_key}|{condition}|{sort_by or ''}"
     cached = _cache_get(cache_key)
     if cached:
         print(f"[cache] HIT: {cache_key}")
@@ -121,24 +132,31 @@ def search():
     all_results = []
     has_more = False
 
-    # Bei aktivem Preisfilter mehr Seiten laden damit genug Treffer nach der Filterung übrig bleiben
-    effective_batch = batch_size * 2 if (min_price is not None or max_price is not None) else batch_size
+    # Quellen parallel abfragen für maximale Geschwindigkeit
+    from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    for source in sources:
-        if source not in PROVIDERS:
-            continue
-        try:
-            results, more = PROVIDERS[source].search(
-                query, location=location, radius=radius,
-                start_page=start_page, batch_size=effective_batch,
-                category=category, category_id=category_id,
-                min_price=min_price, max_price=max_price
-            )
-            all_results.extend(results)
-            has_more = has_more or more
-        except Exception as e:
-            print(f"[{source}] Fehler beim Scraping: {e}")
-            continue
+    def _fetch_source(source):
+        return source, PROVIDERS[source].search(
+            query, location=location, radius=radius,
+            start_page=start_page, batch_size=batch_size,
+            category=category, category_id=category_id,
+            min_price=min_price, max_price=max_price,
+            category_filters=category_filters,
+            condition=condition
+        )
+
+    valid_sources = [s for s in sources if s in PROVIDERS]
+    with ThreadPoolExecutor(max_workers=len(valid_sources)) as executor:
+        futures = {executor.submit(_fetch_source, s): s for s in valid_sources}
+        for future in as_completed(futures):
+            source_name = futures[future]
+            try:
+                _, (results, more) = future.result()
+                all_results.extend(results)
+                has_more = has_more or more
+            except Exception as e:
+                print(f"[{source_name}] Fehler beim Scraping: {e}")
+                continue
 
     # Preisfilter serverseitig anwenden
     if min_price is not None:
@@ -146,10 +164,35 @@ def search():
     if max_price is not None:
         all_results = [r for r in all_results if r.get("price", 0) <= max_price]
 
-    try:
-        sorted_results = sorted(all_results, key=lambda x: x.get("price", 0))
-    except Exception:
-        sorted_results = all_results
+    # Record price history for results in background - with proper error handling
+    def _record_async(items):
+        try:
+            for r in items:
+                if r.get("url") and r.get("price"):
+                    price_history.record_price(r["url"], r["price"])
+        except Exception as e:
+            print(f"[price_history] Error recording prices: {e}")
+    
+    # Feed recent items buffer (for /api/trending)
+    with _recent_items_lock:
+        for r in all_results[:10]:
+            if r.get("title") and r.get("price"):
+                _recent_items.append({
+                    "title": r["title"],
+                    "price": f'{r["price"]:.0f}€',
+                    "tag": r.get("source", "kleinanzeigen").capitalize(),
+                    "url": r.get("url", ""),
+                })
+
+    # Use existing thread to avoid spawning new threads for every request
+    threading.Thread(target=_record_async, args=(all_results,), daemon=True, name="price-recorder").start()
+
+    # Optionale serverseitige Sortierung (ergänzt Frontend-Sortierung)
+    if sort_by == "price_asc":
+        all_results.sort(key=lambda r: r.get("price", 0))
+    elif sort_by == "price_desc":
+        all_results.sort(key=lambda r: r.get("price", 0), reverse=True)
+    sorted_results = all_results
 
     response_data = {"results": sorted_results, "has_more": has_more}
     _cache_set(cache_key, response_data)
@@ -160,12 +203,26 @@ def search():
     print(f"[search] Unerwarteter Fehler: {e}")
     return jsonify({"error": str(e), "results": [], "has_more": False}), 500
 
+@app.route("/price-history", methods=["GET"])
+def get_price_history():
+    url = request.args.get("url")
+    if not url:
+        return jsonify({"error": "No URL provided"}), 400
+    
+    history = price_history.get_history(url)
+    stats = price_history.get_stats(url)
+    return jsonify({
+        "url": url,
+        "history": history,
+        "stats": stats
+    })
+
 @app.route("/alerts", methods=["GET"])
 def get_alerts():
     """Get all price alerts"""
     if not MONITOR_AVAILABLE:
         return jsonify({"alerts": [], "error": "Price monitor not available"}), 503
-    return jsonify({"alerts": monitor.alerts})
+    return jsonify({"alerts": monitor.get_all_alerts()})
 
 @app.route("/alerts", methods=["POST"])
 def create_alert():
@@ -204,7 +261,7 @@ def check_alerts():
         return jsonify({"success": False, "error": "Price monitor not available"}), 503
     try:
         monitor.check_all_alerts()
-        return jsonify({"success": True, "checked": len(monitor.alerts)})
+        return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -226,7 +283,7 @@ def test_telegram():
 def get_search_alerts():
     if not MONITOR_AVAILABLE:
         return jsonify({"alerts": [], "error": "Monitor not available"}), 503
-    return jsonify({"alerts": search_monitor.alerts})
+    return jsonify({"alerts": search_monitor.get_all_alerts()})
 
 @app.route("/search-alerts", methods=["POST"])
 def create_search_alert():
@@ -262,6 +319,81 @@ def check_search_alerts():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route("/api/trending", methods=["GET"])
+def get_trending():
+    """Returns recently seen items from the in-memory buffer."""
+    with _recent_items_lock:
+        items = list(_recent_items)
+    # Deduplicate by title (keep latest)
+    seen_titles = set()
+    unique = []
+    for item in reversed(items):
+        if item["title"] not in seen_titles:
+            seen_titles.add(item["title"])
+            unique.append(item)
+        if len(unique) >= 20:
+            break
+    return jsonify({"items": unique})
+
+
+@app.route("/api/config", methods=["GET"])
+def get_config():
+    """Returns public runtime config flags."""
+    return jsonify({
+        "ebay_available": bool(os.environ.get("EBAY_APP_ID"))
+    })
+
+
+@app.route("/api/health", methods=["GET"])
+def get_health():
+    """Returns the health status of all scrapers based on logs from the last 24 hours."""
+    from database import SessionLocal, ScraperLog
+    from sqlalchemy import func, case
+    from datetime import datetime, timedelta
+    
+    db = SessionLocal()
+    try:
+        one_day_ago = datetime.utcnow() - timedelta(days=1)
+        
+        # Summary for each source
+        stats = db.query(
+            ScraperLog.source,
+            func.count(ScraperLog.id).label('total'),
+            func.sum(case((ScraperLog.status == 'success', 1), else_=0)).label('successes'),
+            func.max(ScraperLog.timestamp).label('last_seen')
+        ).filter(ScraperLog.timestamp >= one_day_ago).group_by(ScraperLog.source).all()
+        
+        results = {}
+        # Default providers if no logs yet
+        for provider in ["kleinanzeigen", "ebay"]:
+            results[provider] = {
+                "status": "unknown",
+                "success_rate": 0,
+                "last_seen": None,
+                "total_attempts": 0
+            }
+
+        for s in stats:
+            success_rate = (s.successes / s.total) * 100 if s.total > 0 else 0
+            status = "healthy" if success_rate > 80 else "warning" if success_rate > 50 else "down"
+            results[s.source] = {
+                "status": status,
+                "success_rate": round(success_rate, 1),
+                "last_seen": s.last_seen.isoformat() if s.last_seen else None,
+                "total_attempts": s.total
+            }
+            
+        return jsonify({
+            "success": True, 
+            "health": results,
+            "server_time": datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+    finally:
+        db.close()
 
 
 def start_monitor():

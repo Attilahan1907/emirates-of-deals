@@ -1,11 +1,15 @@
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState, useCallback } from 'react'
 import { ProductCard } from './ProductCard'
+import { ProductDetailModal } from './ProductDetailModal'
 import { computeDealScores } from '../utils/computeDealScore'
 import { extractGpuModel, extractCpuModel, extractSmartphoneModel } from '../utils/extractModel'
 
 const BENCHMARK_TYPES = ['gpu', 'cpu', 'smartphone', 'ram']
 
 export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages, hasMore, loadingMore, onLoadMore }) {
+  const [selectedItem, setSelectedItem] = useState(null)
+  const [selectedIndex, setSelectedIndex] = useState(-1)
+
   // Auto-detect benchmark type from result titles when no category is active
   const effectiveBenchmarkType = useMemo(() => {
     if (benchmarkType) return benchmarkType
@@ -37,6 +41,16 @@ export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages
     return () => observer.disconnect()
   }, [hasMore, loadingMore, onLoadMore])
 
+  const handleItemClick = useCallback((item, index) => {
+    setSelectedItem(item)
+    setSelectedIndex(index)
+  }, [])
+
+  const handleCloseModal = useCallback(() => {
+    setSelectedItem(null)
+    setSelectedIndex(-1)
+  }, [])
+
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mt-6">
@@ -51,6 +65,7 @@ export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages
             isBenchmark={hasBenchmark}
             onOpenSettings={onOpenSettings}
             showImages={showImages}
+            onItemClick={(clickedItem) => handleItemClick(clickedItem, index)}
           />
         ))}
       </div>
@@ -69,6 +84,17 @@ export function ResultsGrid({ results, benchmarkType, onOpenSettings, showImages
           </p>
         )}
       </div>
+
+      {/* Product Detail Modal — rendered once */}
+      <ProductDetailModal
+        isOpen={!!selectedItem}
+        onClose={handleCloseModal}
+        item={selectedItem}
+        dealScore={selectedIndex >= 0 ? (scores[selectedIndex] ?? null) : null}
+        allPrices={results.map((r) => r.price)}
+        benchmarkType={effectiveBenchmarkType}
+        isBenchmark={hasBenchmark}
+      />
     </>
   )
 }

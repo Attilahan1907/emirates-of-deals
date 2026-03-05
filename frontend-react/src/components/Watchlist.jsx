@@ -1,7 +1,31 @@
 import { useFavorites } from '../hooks/useFavorites'
 import { ProductCard } from './ProductCard'
-import { Heart, Trash2, Bell, BellOff } from 'lucide-react'
+import { Heart, Trash2, Bell, BellOff, Download } from 'lucide-react'
 import { formatPrice } from '../utils/formatPrice'
+
+function exportFavorites(favorites, format) {
+  if (format === 'json') {
+    const blob = new Blob([JSON.stringify(favorites, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'watchlist.json'
+    a.click()
+    URL.revokeObjectURL(url)
+  } else {
+    const header = 'Titel,Preis,URL,Alarm-Preis'
+    const rows = favorites.map(f =>
+      [`"${(f.title || '').replace(/"/g, '""')}"`, f.price ?? '', `"${f.url || ''}"`, f.alertPrice ?? ''].join(',')
+    )
+    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'watchlist.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+}
 
 export function Watchlist() {
   const { favorites, removeFavorite, updateFavorite } = useFavorites()
@@ -49,6 +73,24 @@ export function Watchlist() {
               <span className="bg-foreground/10 text-foreground/60 text-sm px-3 py-1 rounded-full">
                 {favorites.length} {favorites.length === 1 ? 'Artikel' : 'Artikel'}
               </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportFavorites(favorites, 'json')}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-foreground/5 hover:bg-foreground/10 text-foreground/50 hover:text-foreground/80 transition-all border border-foreground/10"
+                title="Als JSON exportieren"
+              >
+                <Download className="w-3.5 h-3.5" />
+                JSON
+              </button>
+              <button
+                onClick={() => exportFavorites(favorites, 'csv')}
+                className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-foreground/5 hover:bg-foreground/10 text-foreground/50 hover:text-foreground/80 transition-all border border-foreground/10"
+                title="Als CSV exportieren"
+              >
+                <Download className="w-3.5 h-3.5" />
+                CSV
+              </button>
             </div>
           </div>
 

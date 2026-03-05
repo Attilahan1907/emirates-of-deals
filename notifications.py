@@ -1,5 +1,38 @@
 import requests
 import os
+import json
+from pywebpush import webpush, WebPushException
+
+def send_browser_push(subscription_info, message_body):
+    """Sends a browser push notification using Web-Push."""
+    VAPID_PRIVATE_KEY = os.getenv('VAPID_PRIVATE_KEY', '')
+    VAPID_CLAIMS = {
+        "sub": "mailto:admin@emirates-of-deals.de"
+    }
+
+    if not VAPID_PRIVATE_KEY:
+        print("[Push] VAPID_PRIVATE_KEY not set. Cannot send browser notification.")
+        return False
+
+    try:
+        webpush(
+            subscription_info=subscription_info,
+            data=json.dumps({
+                "title": "Emirates of Deals Alert",
+                "body": message_body,
+                "icon": "/logo.png"
+            }),
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+        print("[Push] Notification sent.")
+        return True
+    except WebPushException as ex:
+        print(f"[Push] Error: {ex}")
+        return False
+    except Exception as e:
+        print(f"[Push] Unexpected error: {e}")
+        return False
 
 def send_whatsapp(phone_number, message):
     """Send WhatsApp message using Twilio API."""

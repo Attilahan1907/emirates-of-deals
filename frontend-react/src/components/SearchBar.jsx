@@ -23,7 +23,9 @@ export function SearchBar({
   onSearch, loading, activeCategory, onClearCategory,
   minPrice, maxPrice, onMinPriceChange, onMaxPriceChange,
   hasSearched, onSearchAlert, showImages, onShowImagesChange,
-  includeEbay, onIncludeEbayChange, currentQuery,
+  includeEbay, onIncludeEbayChange, ebayAvailable, currentQuery,
+  categoryId, categoryFilters, onCategoryFiltersChange,
+  condition, onConditionChange,
 }) {
   const [query, setQuery] = useState('')
 
@@ -273,6 +275,9 @@ export function SearchBar({
           onMinPriceChange={onMinPriceChange} onMaxPriceChange={onMaxPriceChange}
           showImages={showImages} onShowImagesChange={onShowImagesChange}
           includeEbay={includeEbay} onIncludeEbayChange={onIncludeEbayChange}
+          ebayAvailable={ebayAvailable}
+          categoryId={categoryId} categoryFilters={categoryFilters} onCategoryFiltersChange={onCategoryFiltersChange}
+          condition={condition} onConditionChange={onConditionChange}
         />
         <button type="button" onClick={onSearchAlert}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-primary transition-colors cursor-pointer">
